@@ -38,6 +38,7 @@ function UF:Construct_TargetFrame(frame)
 	frame.AuraBars = self:Construct_AuraBarHeader(frame)
 	frame.GPS = self:Construct_GPS(frame)
 	frame.PvPIndicator = self:Construct_PvPIcon(frame)
+	frame.RareEliteIndicator = self:Construct_RareElite(frame)
 	frame.Fader = self:Construct_Fader()
 	frame.Cutaway = self:Construct_Cutaway(frame)
 	frame.customTexts = {}
@@ -152,6 +153,9 @@ function UF:Update_TargetFrame(frame, db)
 
 	--PvP
 	UF:Configure_PVPIcon(frame)
+
+	--Rare/Elite Overlay
+	UF:Configure_RareElite(frame)
 
 	--CustomTexts
 	UF:Configure_CustomTexts(frame)

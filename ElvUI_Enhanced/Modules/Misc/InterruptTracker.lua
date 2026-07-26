@@ -193,7 +193,7 @@ end
 
 function IT:COMBAT_LOG_EVENT_UNFILTERED(event, _, subEvent, sourceGUID, _, sourceFlags, _, _, _, spellID)
 	if subEvent == "SPELL_CAST_SUCCESS" and spellList[spellID] then
-		if sourceGUID and (band(sourceFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) == COMBATLOG_OBJECT_REACTION_HOSTILE) then
+		if sourceGUID and sourceFlags and COMBATLOG_OBJECT_REACTION_HOSTILE and (band(sourceFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) == COMBATLOG_OBJECT_REACTION_HOSTILE) then
 			local _, _, texture = GetSpellInfo(spellID)
 			self:Update(spellList[spellID], texture)
 		end

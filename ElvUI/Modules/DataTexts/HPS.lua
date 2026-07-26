@@ -4,6 +4,7 @@ local DT = E:GetModule("DataTexts")
 --Lua functions
 local select = select
 local time = time
+local GetTime = GetTime
 local max = math.max
 local join = string.join
 --WoW API / Variables
@@ -16,6 +17,7 @@ local combatTime = 0
 local timeStamp = 0
 local lastSegment = 0
 local lastPanel
+local lastTextUpdate = 0
 local displayString = ""
 
 local function Reset()
@@ -65,6 +67,14 @@ local function OnEvent(self, event, ...)
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		playerID = E.myguid
 		self:UnregisterEvent(event)
+	end
+
+	-- Text refresh is throttled: the totals above stay exact, but the
+	-- FontString does not need re-rendering on every combat log event
+	if event == "COMBAT_LOG_EVENT_UNFILTERED" then
+		local now = GetTime()
+		if (now - lastTextUpdate) < 0.25 then return end
+		lastTextUpdate = now
 	end
 
 	GetHPS(self)

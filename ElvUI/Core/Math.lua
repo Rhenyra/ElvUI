@@ -155,7 +155,7 @@ function E:GetScreenQuadrant(frame)
 end
 
 function E:GetXYOffset(position, override)
-	local default = E.Spacing
+	local default = E.Spacing or 0
 	local x, y = override or default, override or default
 
 	if position == "TOP" then

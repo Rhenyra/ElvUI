@@ -216,11 +216,30 @@ function M:IsChatBubble(frame)
 	end
 end
 
+local messageTimes = {}
+local lastBubblePrune = 0
+
 local function ChatBubble_OnEvent(self, event, msg, sender, _, _, _, _, _, _, _, _, _, guid)
 	if not E.private.general.chatBubbleName then return end
 
 	messageToGUID[msg] = guid
 	messageToSender[msg] = sender
+
+	-- Chat bubbles only live a few seconds, so the correlation caches only
+	-- need very recent entries. Previously these grew unbounded for the
+	-- whole session (one entry per distinct message text seen).
+	local now = GetTime()
+	messageTimes[msg] = now
+	if (now - lastBubblePrune) > 10 then
+		lastBubblePrune = now
+		for text, t in pairs(messageTimes) do
+			if (now - t) > 15 then
+				messageTimes[text] = nil
+				messageToGUID[text] = nil
+				messageToSender[text] = nil
+			end
+		end
+	end
 end
 
 local lastChildern, numChildren = 0, 0

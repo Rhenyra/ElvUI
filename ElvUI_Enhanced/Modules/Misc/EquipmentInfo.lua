@@ -7,11 +7,40 @@ local pairs = pairs
 
 local GetInventoryItemDurability = GetInventoryItemDurability
 local GetInventoryItemID = GetInventoryItemID
+local GetInventoryItemLink = GetInventoryItemLink
 local GetInventorySlotInfo = GetInventorySlotInfo
 local GetItemInfo = GetItemInfo
 local GetItemQualityColor = GetItemQualityColor
 local InCombatLockdown = InCombatLockdown
 local IsAddOnLoaded = IsAddOnLoaded
+
+local scanner = CreateFrame("GameTooltip", "Enhanced_EquipmentItemLevelScanner", nil, "GameTooltipTemplate")
+scanner:SetOwner(UIParent, "ANCHOR_NONE")
+
+local itemLevelPattern
+do
+	local pattern = _G.ITEM_LEVEL or "Item Level %d"
+	pattern = string.gsub(pattern, "%%d", "(%%d+)")
+	pattern = string.gsub(pattern, "%%s", "(%%d+)")
+	itemLevelPattern = pattern
+end
+
+local function GetItemLevelFromTooltip(unit, slotID)
+	scanner:SetOwner(UIParent, "ANCHOR_NONE")
+	scanner:ClearLines()
+	scanner:SetInventoryItem(unit, slotID)
+	for i = 2, scanner:NumLines() do
+		local text = _G["Enhanced_EquipmentItemLevelScannerTextLeft" .. i]:GetText()
+		if text then
+			local ilvl = string.match(text, itemLevelPattern)
+			if ilvl then
+				scanner:Hide()
+				return tonumber(ilvl)
+			end
+		end
+	end
+	scanner:Hide()
+end
 
 local slots = {
 	["HeadSlot"] = true,
@@ -53,7 +82,7 @@ function EI:UpdatePaperDoll(unit)
 	end
 
 	local baseName = unit == "player" and "AscensionCharacter" or "AscensionInspect"
-	local frame, slotID, itemID
+	local frame, slotID
 	local _, rarity, itemLevel
 	local current, maximum, r, g, b
 
@@ -66,10 +95,16 @@ function EI:UpdatePaperDoll(unit)
 			frame.ItemLevel:SetText()
 
 			if E.db.enhanced.equipment.itemlevel.enable then
-				itemID = GetInventoryItemID(unit, slotID)
+				local itemLink = GetInventoryItemLink(unit, slotID)
 
-				if itemID then
-					_, _, rarity, itemLevel = GetItemInfo(itemID)
+				if itemLink then
+					itemLevel = GetItemLevelFromTooltip(unit, slotID)
+
+					if not itemLevel then
+						_, _, rarity, itemLevel = GetItemInfo(itemLink)
+					else
+						_, _, rarity = GetItemInfo(itemLink)
+					end
 
 					if itemLevel then
 						frame.ItemLevel:SetText(itemLevel)
@@ -129,7 +164,13 @@ function EI:UpdateInfoText(name)
 
 		if frame then
 			frame.ItemLevel:ClearAllPoints()
-			frame.ItemLevel:Point(db.itemlevel.position, frame, db.itemlevel.xOffset, db.itemlevel.yOffset)
+			if slotName == "HandsSlot" or slotName == "WaistSlot" or slotName == "LegsSlot" or slotName == "FeetSlot" or slotName == "Finger0Slot" or slotName == "Finger1Slot" or slotName == "Trinket0Slot" or slotName == "Trinket1Slot" then
+				frame.ItemLevel:Point("RIGHT", frame, "LEFT", -db.itemlevel.xOffset, db.itemlevel.yOffset)
+			elseif slotName == "MainHandSlot" or slotName == "SecondaryHandSlot" or slotName == "RangedSlot" then
+				frame.ItemLevel:Point("BOTTOM", frame, "TOP", db.itemlevel.xOffset, db.itemlevel.yOffset)
+			else
+				frame.ItemLevel:Point("LEFT", frame, "RIGHT", db.itemlevel.xOffset, db.itemlevel.yOffset)
+			end
 			frame.ItemLevel:FontTemplate(E.LSM:Fetch("font", db.font), db.fontSize, db.fontOutline)
 
 			if name == "AscensionCharacter" and durability then
@@ -149,7 +190,9 @@ function EI:OnEvent(event, unit)
 	if event == "UPDATE_INVENTORY_DURABILITY" then
 		self:UpdatePaperDoll("player")
 	elseif event == "UNIT_INVENTORY_CHANGED" then
-		if unit ~= "player" and AscensionInspectFrame and unit == AscensionInspectFrame.unit then
+		if unit == "player" then
+			self:UpdatePaperDoll("player")
+		elseif AscensionInspectFrame and unit == AscensionInspectFrame.unit then
 			self:UpdatePaperDoll(unit)
 		end
 	elseif event == "PLAYER_REGEN_ENABLED" then

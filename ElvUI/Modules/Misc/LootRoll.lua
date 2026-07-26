@@ -441,10 +441,39 @@ function M:ParseRollChoice(msg)
 end
 
 function M:CHAT_MSG_LOOT(_, msg)
+	if not msg then return end
+
+	local hasActiveRoll = false
+	for _, frame in ipairs(self.RollBars) do
+		if frame.rollID then
+			hasActiveRoll = true
+			break
+		end
+	end
+	if not hasActiveRoll then return end
+
 	local playerName, itemName, rollType = self:ParseRollChoice(msg)
 
 	if playerName and itemName then
-		local _, class = UnitClass(playerName)
+		local class
+		if playerName == E.myname then
+			class = E.myclass
+		else
+			for i = 1, GetNumRaidMembers() do
+				if UnitName("raid"..i) == playerName then
+					class = select(2, UnitClass("raid"..i))
+					break
+				end
+			end
+			if not class then
+				for i = 1, GetNumPartyMembers() do
+					if UnitName("party"..i) == playerName then
+						class = select(2, UnitClass("party"..i))
+						break
+					end
+				end
+			end
+		end
 
 		for _, frame in ipairs(self.RollBars) do
 			if frame.rollID and frame.itemButton.link == itemName and not frame.rollResults[playerName] then

@@ -23,7 +23,6 @@ local UnitAffectingCombat = UnitAffectingCombat
 local UnitAura = UnitAura
 local UnitCanAttack = UnitCanAttack
 local UnitExists = UnitExists
-local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitInParty = UnitInParty
@@ -62,7 +61,8 @@ mod.TriggerConditions = {
 	roles = {
 		TANK = 'tank',
 		HEALER = 'healer',
-		DAMAGER = 'damager'
+		DAMAGER = 'damager',
+		SUPPORT = 'support'
 	},
 	keys = {
 		Modifier = IsModifierKeyDown,
@@ -904,14 +904,19 @@ function mod:StyleFilterConditionCheck(frame, filter, trigger)
 	end
 
 	-- My Role
-	if trigger.role.tank or trigger.role.healer or trigger.role.damager then
-		if trigger.role[mod.TriggerConditions.roles[E:GetPlayerDesiredRole()]] then passed = true else return end
+	if trigger.role.tank or trigger.role.healer or trigger.role.damager or trigger.role.support then
+		local myRoleKey = mod.TriggerConditions.roles[E:GetPlayerDesiredRole()]
+		if myRoleKey and trigger.role[myRoleKey] then passed = true else return end
 	end
 
 	-- Unit Role
-	if trigger.unitRole.tank or trigger.unitRole.healer or trigger.unitRole.damager then
-		local role = UnitGroupRolesAssigned(frame.unit)
-		if trigger.unitRole[mod.TriggerConditions.roles[role]] then passed = true else return end
+	if trigger.unitRole.tank or trigger.unitRole.healer or trigger.unitRole.damager or trigger.unitRole.support then
+		-- E:GetUnitRole returns a role STRING; the old direct
+		-- UnitGroupRolesAssigned call returned booleans on this client, so the
+		-- table lookup below could never match and the trigger never fired
+		local role = E:GetUnitRole(frame.unit)
+		local roleKey = role and mod.TriggerConditions.roles[role]
+		if roleKey and trigger.unitRole[roleKey] then passed = true else return end
 	end
 
 	-- Unit Type

@@ -255,6 +255,7 @@ function M:Initialize()
 	self:LoadLoot()
 	self:LoadLootRoll()
 	self:LoadChatBubbles()
+	self:LoadQuestAnnounce()
 
 	self:ToggleErrorHandling()
 	self:ToggleInterruptAnnounce()

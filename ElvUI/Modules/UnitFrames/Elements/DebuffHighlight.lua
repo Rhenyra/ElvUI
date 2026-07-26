@@ -53,13 +53,19 @@ function UF:Configure_DebuffHighlight(frame)
 	end
 end
 
-function UF:PostUpdate_DebuffHighlight(object, debuffType, texture, wasFiltered, style)
+function UF:PostUpdate_DebuffHighlight(object, debuffType, texture, wasFiltered, style, color)
 	if debuffType and not wasFiltered then
-		local color = UF.db.colors.debuffHighlight[debuffType]
-		if object.DebuffHighlightBackdrop and object.DBHGlow then
-			object.DBHGlow:SetBackdropBorderColor(color.r, color.g, color.b, color.a)
-		else
-			object.DebuffHighlight:SetVertexColor(color.r, color.g, color.b, color.a)
+		local customColor = UF.db.colors.debuffHighlight[debuffType]
+		if customColor then
+			color = customColor
+		end
+
+		if color then
+			if object.DebuffHighlightBackdrop and object.DBHGlow then
+				object.DBHGlow:SetBackdropBorderColor(color.r, color.g, color.b, color.a)
+			else
+				object.DebuffHighlight:SetVertexColor(color.r, color.g, color.b, color.a or object.DebuffHighlightAlpha or 0.5)
+			end
 		end
 	end
 end

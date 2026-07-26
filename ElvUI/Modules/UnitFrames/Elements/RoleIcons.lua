@@ -4,7 +4,6 @@ local UF = E:GetModule("UnitFrames")
 --Lua functions
 local random = math.random
 --WoW API / Variables
-local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitIsConnected = UnitIsConnected
 
 function UF:Construct_RoleIcon(frame)
@@ -20,29 +19,31 @@ end
 local roleIconTextures = {
 	TANK = E.Media.Textures.Tank,
 	HEALER = E.Media.Textures.Healer,
-	DAMAGER = E.Media.Textures.DPS
+	DAMAGER = E.Media.Textures.DPS,
+	SUPPORT = "Interface\\AddOns\\ElvUI\\media\\textures\\support"
 }
 
 function UF:UpdateRoleIcon(event)
 	local lfdrole = self.GroupRoleIndicator
 	if not self.db then return end
 	local db = self.db.roleIcon
-
+ 
 	if (not db) or (db and not db.enable) then
 		lfdrole:Hide()
 		return
 	end
 
-	local isTank, isHealer, isDamage = UnitGroupRolesAssigned(self.unit)
-	local role = isTank and "TANK" or isHealer and "HEALER" or isDamage and "DAMAGER" or "NONE"
+	-- E:GetUnitRole resolves CoA Support specs (own spec, Details cache,
+	-- inspect data) on top of the native role API
+	local role = E:GetUnitRole(self.unit)
 	if self.isForced and role == "NONE" then
-		local rnd = random(1, 3)
-		role = rnd == 1 and "TANK" or (rnd == 2 and "HEALER" or (rnd == 3 and "DAMAGER"))
+		local rnd = random(1, 4)
+		role = rnd == 1 and "TANK" or (rnd == 2 and "HEALER" or (rnd == 3 and "DAMAGER" or (rnd == 4 and "SUPPORT")))
 	end
 
 --	local shouldHide = ((event == "PLAYER_REGEN_DISABLED" and db.combatHide and true) or false)
 
-	if (self.isForced or UnitIsConnected(self.unit)) and ((role == "DAMAGER" and db.damager) or (role == "HEALER" and db.healer) or (role == "TANK" and db.tank)) then
+	if (self.isForced or UnitIsConnected(self.unit)) and ((role == "SUPPORT" and db.support ~= false) or (role == "DAMAGER" and db.damager) or (role == "HEALER" and db.healer) or (role == "TANK" and db.tank)) then
 		lfdrole:SetTexture(roleIconTextures[role])
 --		if not shouldHide then
 			lfdrole:Show()

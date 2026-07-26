@@ -65,6 +65,13 @@ UF.headerGroupBy = {
 		header:SetAttribute("sortMethod", "NAME")
 		header:SetAttribute("groupBy", "CLASS")
 	end,
+	["ASSIGNEDROLE"] = function(header)
+		-- Stable role sorting is implemented via a NAMELIST that ElvUI computes
+		-- itself (Modules/UnitFrames/RoleSort.lua). The secure header simply
+		-- follows the list order, so no secure/insecure role disagreement or
+		-- late-arriving spec data can reshuffle the frames anymore.
+		UF:ConfigureRoleSortHeader(header)
+	end,
 	["MTMA"] = function(header)
 		header:SetAttribute("groupingOrder", "MAINTANK,MAINASSIST,NONE")
 		header:SetAttribute("sortMethod", "NAME")
@@ -561,11 +568,26 @@ function UF:CreateAndUpdateUFGroup(group, numGroup)
 end
 
 function UF:HeaderUpdateSpecificElement(group, elementName)
-	assert(self[group], "Invalid group specified.")
-	for i = 1, self[group]:GetNumChildren() do
-		local frame = select(i, self[group]:GetChildren())
-		if frame and frame.Health then
-			frame:UpdateElement(elementName)
+	local headerGroup = self[group]
+	if not headerGroup then return end
+
+	if headerGroup.groups then
+		for _, subGroup in ipairs(headerGroup.groups) do
+			if subGroup and subGroup.GetNumChildren then
+				for i = 1, subGroup:GetNumChildren() do
+					local frame = select(i, subGroup:GetChildren())
+					if frame and frame.UpdateElement then
+						frame:UpdateElement(elementName)
+					end
+				end
+			end
+		end
+	elseif headerGroup.GetNumChildren then
+		for i = 1, headerGroup:GetNumChildren() do
+			local frame = select(i, headerGroup:GetChildren())
+			if frame and frame.UpdateElement then
+				frame:UpdateElement(elementName)
+			end
 		end
 	end
 end
@@ -626,6 +648,19 @@ function UF.groupPrototype:Configure_Groups(frame)
 			if not group.isForced then
 				group:SetAttribute("maxColumns", db.raidWideSorting and numGroups or 1)
 				group:SetAttribute("unitsPerColumn", db.raidWideSorting and (db.groupsPerRowCol * 5) or 5)
+				if db.groupBy == "ASSIGNEDROLE" then
+					-- RoleSort needs to know which subgroup this header shows (0 = whole raid)
+					group.roleSortGroupIndex = (db.raidWideSorting and 0) or i
+					group.roleSortShowPlayer = db.showPlayer
+				else
+					group.roleSortGroupIndex = nil
+					if UF.roleSortHeaders then
+						UF.roleSortHeaders[group] = nil
+					end
+					if group:GetAttribute("nameList") ~= nil then
+						group:SetAttribute("nameList", nil)
+					end
+				end
 				if UF.headerGroupBy[db.groupBy] then
 					UF.headerGroupBy[db.groupBy](group)
 				else
@@ -635,7 +670,11 @@ function UF.groupPrototype:Configure_Groups(frame)
 				group:SetAttribute("showPlayer", db.showPlayer)
 			end
 
-			if i == 1 and db.raidWideSorting then
+			if db.groupBy == "ASSIGNEDROLE" and not group.isForced then
+				-- NAMELIST sorting: membership comes from the nameList attribute;
+				-- a set groupFilter would make the secure header ignore the list
+				group:SetAttribute("groupFilter", nil)
+			elseif i == 1 and db.raidWideSorting then
 				group:SetAttribute("groupFilter", "1,2,3,4,5,6,7,8")
 			else
 				group:SetAttribute("groupFilter", tostring(i))
@@ -1340,6 +1379,9 @@ function UF:UpdatePredictionStatusBar(prediction, parent)
 
 	UF:Update_StatusBar(prediction.myBar, texture)
 	UF:Update_StatusBar(prediction.otherBar, texture)
+	if prediction.absorbBar then
+		UF:Update_StatusBar(prediction.absorbBar, texture)
+	end
 end
 
 function UF:SetStatusBarBackdropPoints(statusBar, statusBarTex, backdropTex, statusBarOrientation)

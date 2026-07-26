@@ -1072,6 +1072,7 @@ L["Threat Display Mode"] = true
 L["Threat Health"] = true
 L["Threat Power"] = true
 L["Threat"] = true
+L["Threat Indicator"] = true
 L["Threshold (in minutes) before text is shown in the HH:MM format. Set to -1 to never change to this format."] = true
 L["Threshold (in seconds) before text is shown in the MM:SS format. Set to -1 to never change to this format."] = true
 L["Threshold before text goes into decimal form. Set to -1 to disable decimals."] = true

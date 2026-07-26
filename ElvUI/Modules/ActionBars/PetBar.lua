@@ -23,16 +23,31 @@ local NUM_PET_ACTION_SLOTS = NUM_PET_ACTION_SLOTS
 local bar = CreateFrame("Frame", "ElvUI_BarPet", E.UIParent, "SecureHandlerStateTemplate")
 bar:SetFrameStrata("LOW")
 
+local petButtonCache -- [i] = {button, icon, autoCast, shine}; the Blizzard
+-- frames are static, so resolve the _G["PetActionButton"..i..] names once
+-- instead of 4 string-concat global lookups per slot on every UNIT_FLAGS/
+-- UNIT_AURA event
+
 function AB:UpdatePet(event, unit)
 	if (event == "UNIT_FLAGS" or event == "UNIT_AURA") and unit ~= "pet" then return end
 	if event == "UNIT_PET" and unit ~= "player" then return end
 
+	if not petButtonCache then
+		petButtonCache = {}
+		for i = 1, NUM_PET_ACTION_SLOTS, 1 do
+			local buttonName = "PetActionButton"..i
+			petButtonCache[i] = {
+				_G[buttonName],
+				_G[buttonName.."Icon"],
+				_G[buttonName.."AutoCastable"],
+				_G[buttonName.."Shine"],
+			}
+		end
+	end
+
 	for i = 1, NUM_PET_ACTION_SLOTS, 1 do
-		local buttonName = "PetActionButton"..i
-		local button = _G[buttonName]
-		local icon = _G[buttonName.."Icon"]
-		local autoCast = _G[buttonName.."AutoCastable"]
-		local shine = _G[buttonName.."Shine"]
+		local cached = petButtonCache[i]
+		local button, icon, autoCast, shine = cached[1], cached[2], cached[3], cached[4]
 		local name, subtext, texture, isToken, isActive, autoCastAllowed, autoCastEnabled = GetPetActionInfo(i)
 
 		if not isToken then

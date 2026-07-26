@@ -15,15 +15,18 @@ local datatexts = {}
 
 function DT:PanelLayoutOptions()
 	for name, data in pairs(DT.RegisteredDataTexts) do
-		datatexts[name] = data.localizedName or L[name]
+		datatexts[name] = data.localizedName or (L[name] and L[name] ~= name and L[name]) or name
 	end
 	datatexts[""] = L["NONE"]
 
 	local order
 	local table = E.Options.args.datatexts.args.panels.args
 	for pointLoc, tab in pairs(P.datatexts.panels) do
-		if not _G[pointLoc] then table[pointLoc] = nil return end
-		if type(tab) == "table" then
+		-- 'return' here aborted the WHOLE function for every remaining panel;
+		-- a missing frame should only skip its own entry
+		if not _G[pointLoc] then
+			table[pointLoc] = nil
+		elseif type(tab) == "table" then
 			if pointLoc:find("Chat") then
 				order = 15
 			else

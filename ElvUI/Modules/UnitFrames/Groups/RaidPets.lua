@@ -51,20 +51,33 @@ end
 
 --I don"t know if this function is needed or not? But the error I pm'ed you about was because of the missing OnEvent so I just added it.
 function UF:RaidPetsSmartVisibility(event)
+	local start = debugprofilestop()
 	if not self.db or (self.db and not self.db.enable) or (UF.db and not UF.db.smartRaidFilter) or self.isForced then return end
 	if event == "PLAYER_REGEN_ENABLED" then self:UnregisterEvent("PLAYER_REGEN_ENABLED") end
 
 	if not InCombatLockdown() then
 		local _, instanceType = GetInstanceInfo()
 		if instanceType == "raid" then
-			UnregisterStateDriver(self, "visibility")
-			self:Show()
+			if not self._inBlockMode then
+				UnregisterStateDriver(self, "visibility")
+				self:Show()
+				self._inBlockMode = true
+				self._activeStateDriver = nil
+			end
 		elseif self.db.visibility then
-			RegisterStateDriver(self, "visibility", self.db.visibility)
+			self._inBlockMode = false
+			if self._activeStateDriver ~= self.db.visibility then
+				RegisterStateDriver(self, "visibility", self.db.visibility)
+				self._activeStateDriver = self.db.visibility
+			end
 		end
 	else
 		self:RegisterEvent("PLAYER_REGEN_ENABLED")
 		return
+	end
+	local elapsed = debugprofilestop() - start
+	if elapsed > 1 then
+		_G.ElvUI_LogDiagnostic(string.format("[Profile] RaidPetsSmartVisibility took: %.2f ms", elapsed))
 	end
 end
 

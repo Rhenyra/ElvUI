@@ -8,10 +8,17 @@ local GetTime = GetTime
 local CreateFrame = CreateFrame
 local hooksecurefunc = hooksecurefunc
 
+-- local aliases for hot-path methods called inside Cooldown_OnUpdate (fires every frame per active cooldown)
+local _Cooldown_IsEnabled    = function(cd) return E:Cooldown_IsEnabled(cd) end
+local _Cooldown_StopTimer    = function(cd) return E:Cooldown_StopTimer(cd) end
+local _Cooldown_BelowScale   = function(cd) return E:Cooldown_BelowScale(cd) end
+local _Cooldown_TextThreshold = function(cd, now) return E:Cooldown_TextThreshold(cd, now) end
+
+
 local ICON_SIZE = 36 --the normal size for an icon (don't change this)
 local FONT_SIZE = 20 --the base font size to use at a scale of 1
 local MIN_SCALE = 0.5 --the minimum scale we want to show cooldown counts at, anything below this will be hidden
-local MIN_DURATION = 1.5 --the minimum duration to show cooldown text for
+local MIN_DURATION = 2.0 --the minimum duration to show cooldown text for (raised from 1.5 to avoid timers for GCD-length cooldowns)
 
 function E:Cooldown_TextThreshold(cd, now)
 	if cd.parent and cd.parent.textThreshold and cd.endTime then
@@ -34,17 +41,17 @@ function E:Cooldown_OnUpdate(elapsed)
 		return
 	end
 
-	if not E:Cooldown_IsEnabled(self) then
-		E:Cooldown_StopTimer(self)
+	if not _Cooldown_IsEnabled(self) then
+		_Cooldown_StopTimer(self)
 	else
 		local now = GetTime()
 		if self.endCooldown and now >= self.endCooldown then
-			E:Cooldown_StopTimer(self)
+			_Cooldown_StopTimer(self)
 		else
-			if E:Cooldown_BelowScale(self) then
+			if _Cooldown_BelowScale(self) then
 				self.text:SetText("")
 				self.nextUpdate = 500
-			elseif E:Cooldown_TextThreshold(self, now) then
+			elseif _Cooldown_TextThreshold(self, now) then
 				self.text:SetText("")
 				self.nextUpdate = 1
 			elseif self.endTime then
@@ -69,6 +76,7 @@ function E:Cooldown_OnUpdate(elapsed)
 		end
 	end
 end
+
 
 function E:Cooldown_OnSizeChanged(cd, width, force)
 	local scale = width and (floor(width + 0.5) / ICON_SIZE)
@@ -220,6 +228,7 @@ end
 
 function E:RegisterCooldown(cooldown, module)
 	if not cooldown.isHooked then
+		if not cooldown.SetCooldown then return end -- guard: some frames on Classless realms lack SetCooldown
 		hooksecurefunc(cooldown, "SetCooldown", E.OnSetCooldown)
 		if cooldown:GetParent() and cooldown:GetParent().isNamePlate then
 			cooldown.Show = cooldown.Hide

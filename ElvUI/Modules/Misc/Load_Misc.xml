@@ -10,4 +10,8 @@
 	<Script file="TotemBar.lua"/>
 	<Script file="RaidUtility.lua"/>
 	<Script file="AFK.lua"/>
+	<Script file="AuraTracker.lua"/>
+	<Script file="Profiler.lua"/>
+	<Script file="SpecCache.lua"/>
+	<Script file="QuestAnnounce.lua"/>
 </Ui>

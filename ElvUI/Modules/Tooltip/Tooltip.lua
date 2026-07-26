@@ -388,9 +388,9 @@ function TT:GameTooltip_OnTooltipSetUnit(tt)
 				targetColor = E.db.tooltip.useCustomFactionColors and E.db.tooltip.factionColors[UnitReaction(unitTarget, "player")] or FACTION_BAR_COLORS[UnitReaction(unitTarget, "player")]
 			end
 
-			if not targetColor then
+			if not targetColor or type(targetColor) ~= "table" or not targetColor.r then
 				local _, class = UnitClass(unitTarget)
-				targetColor = UnitIsUnit("player", unitTarget) and E.media.herocolor or RAID_CLASS_COLORS[class]
+				targetColor = (class and (UnitIsUnit("player", unitTarget) and E.media.herocolor or RAID_CLASS_COLORS[class])) or {r = 1, g = 1, b = 1}
 			end
 
 			tt:AddDoubleLine(format("%s:", TARGET), format("|cff%02x%02x%02x%s|r", targetColor.r * 255, targetColor.g * 255, targetColor.b * 255, UnitName(unitTarget)))

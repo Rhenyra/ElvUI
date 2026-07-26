@@ -102,7 +102,7 @@ local function LoadSkin()
 		local progressBars = 0
 		for i = 1, numCriteria do
 			local _, _, _, quantity, reqQuantity, _, flags = GetAchievementCriteriaInfo(id, i)
-			if band(flags, ACHIEVEMENT_CRITERIA_PROGRESS_BAR) == ACHIEVEMENT_CRITERIA_PROGRESS_BAR then
+			if flags and ACHIEVEMENT_CRITERIA_PROGRESS_BAR and band(flags, ACHIEVEMENT_CRITERIA_PROGRESS_BAR) == ACHIEVEMENT_CRITERIA_PROGRESS_BAR then
 				progressBars = progressBars + 1
 				local progressBar = AchievementButton_GetProgressBar(progressBars)
 				PlayAnimationStatusBar(progressBar, reqQuantity, quantity, true)

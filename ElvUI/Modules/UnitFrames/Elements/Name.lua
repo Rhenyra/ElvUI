@@ -15,13 +15,17 @@ end
 
 function UF:UpdateNameSettings(frame, childType)
 	local db = frame.db
-	if childType == "pet" then
+	if childType == "pet" and frame.db and frame.db.petsGroup then
 		db = frame.db.petsGroup
-	elseif childType == "target" then
+	elseif childType == "target" and frame.db and frame.db.targetsGroup then
 		db = frame.db.targetsGroup
 	end
 
+	if not db or not db.name then return end
+
 	local name = frame.Name
+	if not name then return end
+
 	if not db.power or not db.power.enable or not db.power.hideonnpc then
 		local attachPoint = self:GetObjectAnchorPoint(frame, db.name.attachTextTo)
 		name:ClearAllPoints()
@@ -32,8 +36,9 @@ function UF:UpdateNameSettings(frame, childType)
 end
 
 function UF:PostNamePosition(frame, unit)
-	if not frame.Power.value:IsShown() then return end
+	if not frame.Power or not frame.Power.value or not frame.Power.value:IsShown() then return end
 	local db = frame.db
+	if not db or not db.name then return end
 	if UnitIsPlayer(unit) or (db.power and not db.power.enable) then
 		local position = db.name.position
 		local attachPoint = self:GetObjectAnchorPoint(frame, db.name.attachTextTo)

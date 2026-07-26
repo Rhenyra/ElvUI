@@ -61,6 +61,7 @@ function UF:Construct_RaidFrames()
 end
 
 function UF:RaidSmartVisibility(event)
+	local start = debugprofilestop()
 	if not self.db or (self.db and not self.db.enable) or (UF.db and not UF.db.smartRaidFilter) or self.isForced then
 		self.blockVisibilityChanges = false
 		return
@@ -77,21 +78,31 @@ function UF:RaidSmartVisibility(event)
 				maxPlayers = UF.instanceMapIDs[mapID]
 			end
 
-			UnregisterStateDriver(self, "visibility")
+			if not self._inBlockMode or self._lastMaxPlayers ~= maxPlayers then
+				UnregisterStateDriver(self, "visibility")
+				self._activeStateDriver = nil
+				self._inBlockMode = true
+				self._lastMaxPlayers = maxPlayers
 
-			if maxPlayers < 40 then
-				self:Show()
-				self.isInstanceForced = true
-				self.blockVisibilityChanges = false
-				if ElvUF_Raid.numGroups ~= E:Round(maxPlayers/5) and event then
-					UF:CreateAndUpdateHeaderGroup("raid")
+				if maxPlayers < 40 then
+					self:Show()
+					self.isInstanceForced = true
+					self.blockVisibilityChanges = false
+
+					if ElvUF_Raid.numGroups ~= E:Round(maxPlayers/5) and event then
+						UF:CreateAndUpdateHeaderGroup("raid")
+					end
+				else
+					self.blockVisibilityChanges = true
+					self:Hide()
 				end
-			else
-				self.blockVisibilityChanges = true
-				self:Hide()
 			end
 		elseif self.db.visibility then
-			RegisterStateDriver(self, "visibility", self.db.visibility)
+			self._inBlockMode = false
+			if self._activeStateDriver ~= self.db.visibility then
+				RegisterStateDriver(self, "visibility", self.db.visibility)
+				self._activeStateDriver = self.db.visibility
+			end
 			self.blockVisibilityChanges = false
 			if ElvUF_Raid.numGroups ~= self.db.numGroups then
 				UF:CreateAndUpdateHeaderGroup("raid")
@@ -100,6 +111,10 @@ function UF:RaidSmartVisibility(event)
 	else
 		self:RegisterEvent("PLAYER_REGEN_ENABLED")
 		return
+	end
+	local elapsed = debugprofilestop() - start
+	if elapsed > 1 then
+		_G.ElvUI_LogDiagnostic(string.format("[Profile] RaidSmartVisibility took: %.2f ms", elapsed))
 	end
 end
 

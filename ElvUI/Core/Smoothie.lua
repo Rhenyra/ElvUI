@@ -34,7 +34,7 @@ local function isCloseEnough(new, target, range)
 end
 
 local frame = CreateFrame("Frame")
-local function onUpdate(_, elapsed)
+local function onUpdate(self, elapsed)
 	for object, target in next, activeObjects do
 		local new = lerp(object._value, target, clamp(AMOUNT * elapsed * TARGET_FPS))
 		if isCloseEnough(new, target, object._max - object._min) then
@@ -45,6 +45,13 @@ local function onUpdate(_, elapsed)
 		object:SetValue_(new)
 		object._value = new
 	end
+
+	-- Detach while idle: previously this kept running every frame for the
+	-- whole session once any bar ever enabled smoothing, even with nothing
+	-- animating. Re-attached lazily by bar_SetSmoothedValue.
+	if not next(activeObjects) then
+		self:SetScript("OnUpdate", nil)
+	end
 end
 
 local function bar_SetSmoothedValue(self, value)
@@ -54,6 +61,10 @@ local function bar_SetSmoothedValue(self, value)
 
 	self._value = self:GetValue()
 	activeObjects[self] = clamp(value, self._min, self._max)
+
+	if not frame:GetScript("OnUpdate") then
+		frame:SetScript("OnUpdate", onUpdate)
+	end
 end
 
 local function bar_SetSmoothedMinMaxValues(self, min, max)

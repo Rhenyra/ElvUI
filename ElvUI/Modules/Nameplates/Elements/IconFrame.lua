@@ -4,6 +4,11 @@ local NP = E:GetModule("NamePlates")
 --Lua functions
 --WoW API / Variables
 
+-- Initialized here because nothing else on this build creates these
+-- (indexing nil would error the first time this element updates)
+NP.Totems = NP.Totems or {}
+NP.UniqueUnits = NP.UniqueUnits or {}
+
 function NP:Update_IconFrame(frame, triggered)
 	local db = self.db.units[frame.UnitType].iconFrame
 	if not db then return end

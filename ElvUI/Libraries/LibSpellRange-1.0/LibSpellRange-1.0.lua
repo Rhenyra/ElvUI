@@ -100,9 +100,9 @@ local function UpdateBook(bookType)
 	for spellBookID = 1, max do
 		local spellName, rank = GetSpellName(spellBookID, bookType)
 
-		if spellName and (rank == "" or rank:match("%d+")) then
-			local link = GetSpellLink(spellName, rank)
-			local spellID = tonumber(link and link:gsub("|", "||"):match("spell:(%d+)"))
+		if spellName then
+			local link = GetSpellLink(spellBookID, bookType)
+			local spellID = link and tonumber(link:match("spell:(%d+)"))
 
 			if spellName then
 				spellsByName[strlower(spellName)] = spellBookID

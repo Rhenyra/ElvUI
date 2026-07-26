@@ -313,6 +313,9 @@ end
 function B:UpdateSlotAppearance(slot, clink)
 	if not (slot and clink) then return end
 
+	-- Ensure the slot has appearance elements initialized
+	B:CreateSlotAppearanceElements(slot)
+
 	slot.id = GetItemInfoFromHyperlink(clink)
 	local iLvl, iType, iSubtype, itemEquipLoc, itemPrice
 	slot.name, _, slot.rarity, iLvl, _, iType, iSubtype, _, itemEquipLoc, _, itemPrice = GetItemInfo(clink)
@@ -324,20 +327,52 @@ function B:UpdateSlotAppearance(slot, clink)
 
 	-- Bind type (BoE / BoU)
 	if B.db.showBindType and (slot.rarity and slot.rarity > 1) then
-		local bindTypeLines = GetCVarBool("colorblindmode") and 8 or 7
-		local BoE, BoU
-		for i = 2, bindTypeLines do
-			local line = _G["ElvUI_ScanTooltipTextLeft"..i]:GetText()
-			if (not line or line == "") or (line == ITEM_SOULBOUND or line == ITEM_ACCOUNTBOUND or line == ITEM_BNETACCOUNTBOUND) then break end
+		B.BindTypeCache = B.BindTypeCache or {}
+		local itemID = slot.id or GetItemInfoFromHyperlink(clink)
+		local cachedBind = itemID and B.BindTypeCache[itemID]
 
-			BoE, BoU = line == ITEM_BIND_ON_EQUIP, line == ITEM_BIND_ON_USE
+		if cachedBind ~= nil then
+			if cachedBind and slot.bindType then
+				slot.bindType:SetText(cachedBind == "BoE" and L["BoE"] or L["BoU"])
+				slot.bindType:SetVertexColor(r, g, b)
+			end
+		else
+			E.ScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+			if slot.GetInventorySlot then
+				E.ScanTooltip:SetInventoryItem("player", slot:GetInventorySlot())
+			elseif slot.bagID and slot.slotID then
+				E.ScanTooltip:SetBagItem(slot.bagID, slot.slotID)
+			end
+			E.ScanTooltip:Show()
 
-			if not B.db.showBindType and (slot.rarity and slot.rarity > 1) or (BoE or BoU) then break end
-		end
+			local bindTypeLines = GetCVarBool("colorblindmode") and 8 or 7
+			local BoE, BoU
+			for i = 2, bindTypeLines do
+				local line = _G["ElvUI_ScanTooltipTextLeft"..i]:GetText()
+				if (not line or line == "") or (line == ITEM_SOULBOUND or line == ITEM_ACCOUNTBOUND or line == ITEM_BNETACCOUNTBOUND) then break end
 
-		if (BoE or BoU) and slot.bindType then
-			slot.bindType:SetText(BoE and L["BoE"] or L["BoU"])
-			slot.bindType:SetVertexColor(r, g, b)
+				BoE, BoU = line == ITEM_BIND_ON_EQUIP, line == ITEM_BIND_ON_USE
+
+				if (BoE or BoU) then break end
+			end
+
+			if BoE then
+				if itemID then B.BindTypeCache[itemID] = "BoE" end
+				if slot.bindType then
+					slot.bindType:SetText(L["BoE"])
+					slot.bindType:SetVertexColor(r, g, b)
+				end
+			elseif BoU then
+				if itemID then B.BindTypeCache[itemID] = "BoU" end
+				if slot.bindType then
+					slot.bindType:SetText(L["BoU"])
+					slot.bindType:SetVertexColor(r, g, b)
+				end
+			else
+				if itemID then B.BindTypeCache[itemID] = false end
+			end
+
+			E.ScanTooltip:Hide()
 		end
 	end
 
@@ -359,6 +394,17 @@ function B:UpdateSlotAppearance(slot, clink)
 
 	local showVanity = slot.unlearnedVanityIcon and E.db.bags.unlearnedVanityIcon and slot.isUnlearnedVanity
 	local showWardrobe = slot.unlearnedWardrobeIcon and E.db.bags.unlearnedWardrobeIcon and slot.isUnlearnedWardrobe
+
+	-- Ensure the icons are sized correctly (fixes issues where size is unset or mismatched, e.g. in bank)
+	local isBank = slot.bagID and (slot.bagID == -1 or (slot.bagID >= 5 and slot.bagID <= 11))
+	local buttonSize = isBank and B.db.bankSize or B.db.bagSize
+	if buttonSize and buttonSize > 0 then
+		local iconSize = buttonSize / 2
+		if slot.unlearnedVanityAndWardrobeIcon then slot.unlearnedVanityAndWardrobeIcon:Size(iconSize) end
+		if slot.unlearnedVanityIcon then slot.unlearnedVanityIcon:Size(iconSize) end
+		if slot.unlearnedWardrobeIcon then slot.unlearnedWardrobeIcon:Size(iconSize) end
+		if slot.JunkIcon then slot.JunkIcon:Size(iconSize) end
+	end
 
 	-- Vanity & Wardrobe icons (or junk)
 	if showVanity and showWardrobe then
@@ -491,22 +537,16 @@ function B:UpdateSlot(frame, bagID, slotID)
 	local texture, count, locked, _, readable = GetContainerItemInfo(bagID, slotID)
 	local clink = GetContainerItemLink(bagID, slotID)
 
+	-- Store bagID and slotID on slot for appearance tooltip scanning
+	slot.bagID = bagID
+	slot.slotID = slotID
+
 	-- Clear any previous dynamic appearance state and set locked/readable
 	B:ClearSlotAppearance(slot)
 	slot.locked = locked
 	slot.readable = readable
 
 	slot:Show()
-
-	if B.db.showBindType then
-		E.ScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
-		if slot.GetInventorySlot then -- this fixes bank bagid -1
-			E.ScanTooltip:SetInventoryItem("player", slot:GetInventorySlot())
-		else
-			E.ScanTooltip:SetBagItem(bagID, slotID)
-		end
-		E.ScanTooltip:Show()
-	end
 
 	if B.db.professionBagColors and B.ProfessionColors[bagType] then
 		slot:SetBackdropBorderColor(unpack(B.ProfessionColors[bagType]))
@@ -519,8 +559,6 @@ function B:UpdateSlot(frame, bagID, slotID)
 		slot:SetBackdropBorderColor(unpack(E.media.bordercolor))
 		slot.ignoreBorderColors = nil
 	end
-
-	E.ScanTooltip:Hide()
 
 	if texture then
 		local start, duration, enable = GetContainerItemCooldown(bagID, slotID)
@@ -1003,8 +1041,32 @@ function B:UpdateAll()
 	if B.BankFrame then B:Layout(true) end
 end
 
+-- Runs the BAG_UPDATE work that was deferred while the frame was hidden
+-- (see the BAG_UPDATE branch in B:OnEvent)
+function B:FlushDeferredBagUpdate(frame)
+	if not frame.bagUpdateDeferred then return end
+	frame.bagUpdateDeferred = nil
+
+	for _, bagID in ipairs(frame.BagIDs) do
+		local numSlots = GetContainerNumSlots(bagID)
+		if (not frame.Bags[bagID] and numSlots ~= 0) or (frame.Bags[bagID] and numSlots ~= frame.Bags[bagID].numSlots) then
+			B:Layout(frame.isBank)
+			return
+		end
+	end
+
+	B:UpdateAllSlots(frame)
+	for slotID = 1, GetKeyRingSize() do
+		B:UpdateKeySlot(slotID)
+	end
+end
+
 function B:OnEvent(event, ...)
 	if event == "ITEM_LOCK_CHANGED" or event == "ITEM_UNLOCKED" then
+		-- Skip immediate lock visual updates during rapid sort pumping.
+		-- A full redraw runs at the end anyway, preventing hundreds of synchronous tooltip scans.
+		if B.SortUpdateTimer and B.SortUpdateTimer:IsShown() then return end
+		
 		local bag, slot = ...
 		if bag == KEYRING_CONTAINER then
 			B:UpdateKeySlot(slot)
@@ -1012,6 +1074,15 @@ function B:OnEvent(event, ...)
 			B:UpdateSlot(self, bag, slot)
 		end
 	elseif event == "BAG_UPDATE" then
+		-- Raid looting happens with bags closed: skip the per-slot item and
+		-- appearance refresh chain entirely while hidden and run one deferred
+		-- refresh when the frame is opened (mirrors the IsShown gates the
+		-- sibling branches below already use)
+		if not self:IsShown() then
+			self.bagUpdateDeferred = true
+			return
+		end
+
 		local bag = ...
 		if bag == KEYRING_CONTAINER then
 			for slotID = 1, GetKeyRingSize() do
@@ -1027,10 +1098,16 @@ function B:OnEvent(event, ...)
 			end
 		end
 
-		B:UpdateBagSlots(self, ...)
-
-		--Refresh search in case we moved items around
-		if B:IsSearching() then B:RefreshSearch() end
+		if not self.UpdateBagSlotsTimer then self.UpdateBagSlotsTimer = {} end
+		if not self.UpdateBagSlotsTimer[bag] then
+			self.UpdateBagSlotsTimer[bag] = E:Delay(0.05, function()
+				B:UpdateBagSlots(self, bag)
+				
+				--Refresh search in case we moved items around
+				if B:IsSearching() then B:RefreshSearch() end
+				self.UpdateBagSlotsTimer[bag] = nil
+			end)
+		end
 	elseif event == "BAG_UPDATE_COOLDOWN" then
 		if not self:IsShown() then return end
 		B:UpdateCooldowns(self)
@@ -1369,7 +1446,10 @@ function B:ContructContainerFrame(name, isBank)
 			end
 		end)
 
-		f:SetScript("OnShow", B.RefreshSearch)
+		f:SetScript("OnShow", function(frame)
+			B:FlushDeferredBagUpdate(frame)
+			B.RefreshSearch(frame)
+		end)
 		f:SetScript("OnHide", function()
 			CloseBankFrame()
 
@@ -1434,12 +1514,13 @@ function B:ContructContainerFrame(name, isBank)
 		f.sortButton:SetScript("OnEnter", self.Tooltip_Show)
 		f.sortButton:SetScript("OnLeave", GameTooltip_Hide)
 		f.sortButton:SetScript("OnClick", function()
+			f:UnregisterAllBuckets()
 			f:UnregisterAllEvents() --Unregister to prevent unnecessary updates
 			if not f.registerUpdate then
 				B:SortingFadeBags(f, true)
 			end
 			
-			-- Check if Shift is held down to reverse sort direction (opposite of setting)  -- ADD THIS SECTION
+			-- Check if Shift is held down to reverse sort direction (opposite of setting)
 			local reverseSort = nil
 			if IsShiftKeyDown() then
 				reverseSort = not B.db.sortInverted  -- Opposite of current setting
@@ -1501,6 +1582,49 @@ function B:ContructContainerFrame(name, isBank)
 		f.vendorGraysButton:SetScript("OnLeave", GameTooltip_Hide)
 		f.vendorGraysButton:SetScript("OnClick", B.VendorGrayCheck)
 
+		--Collect Transmog
+		f.transmogButton = CreateFrame("Button", name.."TransmogButton", f)
+		f.transmogButton:Size(16 + E.Border)
+		f.transmogButton:SetTemplate()
+		f.transmogButton:Point("RIGHT", f.vendorGraysButton, "LEFT", -5, 0)
+		f.transmogButton:SetNormalTexture("Interface\\Icons\\inv_misc_tabardpvp_01")
+		f.transmogButton:GetNormalTexture():SetTexCoord(unpack(E.TexCoords))
+		f.transmogButton:GetNormalTexture():SetInside()
+		f.transmogButton:SetPushedTexture("Interface\\Icons\\inv_misc_tabardpvp_01")
+		f.transmogButton:GetPushedTexture():SetTexCoord(unpack(E.TexCoords))
+		f.transmogButton:GetPushedTexture():SetInside()
+		f.transmogButton:StyleButton(nil, true)
+		f.transmogButton.ttText = "Collect Transmog"
+		f.transmogButton:SetScript("OnEnter", B.Tooltip_Show)
+		f.transmogButton:SetScript("OnLeave", GameTooltip_Hide)
+		f.transmogButton:SetScript("OnClick", function()
+			PlaySound("igMainMenuOption")
+			if C_AppearanceCollection and C_AppearanceCollection.CollectItemAppearance then
+				local c = C_AppearanceCollection
+				local collectedCount = 0
+				for bag = 0, 4 do
+					for slot = 1, GetContainerNumSlots(bag) do
+						local itemID = GetContainerItemID(bag, slot)
+						if itemID then
+							local appearanceID = C_Appearance.GetItemAppearanceID(itemID)
+							if appearanceID and not c.IsAppearanceCollected(appearanceID) then
+								local guid = GetContainerItemGUID(bag, slot)
+								c.CollectItemAppearance(guid)
+								collectedCount = collectedCount + 1
+							end
+						end
+					end
+				end
+				if collectedCount > 0 then
+					E:Print(format("Collected %d new appearance(s).", collectedCount))
+				else
+					E:Print("No new appearances to collect.")
+				end
+			else
+				E:Print("Vanity API not found.")
+			end
+		end)
+
 		--Search
 		f.editBox = CreateFrame("EditBox", name.."EditBox", f)
 		f.editBox:SetFrameLevel(f.editBox:GetFrameLevel() + 2)
@@ -1508,7 +1632,7 @@ function B:ContructContainerFrame(name, isBank)
 		f.editBox.backdrop:Point("TOPLEFT", f.editBox, "TOPLEFT", -20, 2)
 		f.editBox:Height(15)
 		f.editBox:Point("BOTTOMLEFT", f.holderFrame, "TOPLEFT", (E.Border * 2) + 18, E.Border * 2 + 2)
-		f.editBox:Point("RIGHT", f.vendorGraysButton, "LEFT", -5, 0)
+		f.editBox:Point("RIGHT", f.transmogButton, "LEFT", -5, 0)
 		f.editBox:SetAutoFocus(false)
 		f.editBox:SetScript("OnEscapePressed", B.ResetAndClear)
 		f.editBox:SetScript("OnEnterPressed", function(eb) eb:ClearFocus() end)
@@ -1548,7 +1672,10 @@ function B:ContructContainerFrame(name, isBank)
 			f.currencyButton[i]:Hide()
 		end
 
-		f:SetScript("OnShow", B.RefreshSearch)
+		f:SetScript("OnShow", function(frame)
+			B:FlushDeferredBagUpdate(frame)
+			B.RefreshSearch(frame)
+		end)
 		f:SetScript("OnHide", function()
 			CloseBackpack()
 			for i = 1, NUM_BAG_FRAMES do
@@ -1620,16 +1747,19 @@ function B:OpenBags()
 end
 
 function B:CloseBags()
-	B.BagFrame:Hide()
+	if not B.BankIsOpen then
+		B.BagFrame:Hide()
 
-	if B.BankFrame then
-		B.BankFrame:Hide()
+		if B.BankFrame then
+			B.BankFrame:Hide()
+		end
 	end
 
 	TT:GameTooltip_SetDefaultAnchor(GameTooltip)
 end
 
 function B:OpenBank()
+	B.BankIsOpen = true
 	if not B.BankFrame then
 		B.BankFrame = B:ContructContainerFrame("ElvUI_BankContainerFrame", true)
 	end
@@ -1652,6 +1782,7 @@ function B:GUILDBANKBAGSLOTS_CHANGED()
 end
 
 function B:CloseBank()
+	B.BankIsOpen = false
 	if not B.BankFrame then return end -- WHY??? WHO KNOWS!
 
 	B.BankFrame:Hide()
@@ -1916,6 +2047,7 @@ function B:Initialize()
 	B.Initialized = true
 	B.db = E.db.bags
 	B.BagFrames = {}
+	B.BankIsOpen = false
 	B.ProfessionColors = {
 		[0x0001] = {B.db.colors.profession.quiver.r, B.db.colors.profession.quiver.g, B.db.colors.profession.quiver.b},
 		[0x0002] = {B.db.colors.profession.ammoPouch.r, B.db.colors.profession.ammoPouch.g, B.db.colors.profession.ammoPouch.b},

@@ -13,7 +13,9 @@ local unpack = unpack
 S:AddCallbackForAddon("TrinketMenu", "TrinketMenu", function()
 	if not E.private.addOnSkins.TrinketMenu then return end
 
---	TrinketMenu_TimersFrame:SetScript("OnUpdate", nil)
+	if TrinketMenu_TimersFrame then
+		TrinketMenu_TimersFrame:SetScript("OnUpdate", nil) -- its work is E.noop'd below; stop the per-frame calls too
+	end
 	TrinketMenu.WriteWornCooldowns = E.noop
 	TrinketMenu.WriteMenuCooldowns = E.noop
 	TrinketMenu.WriteCooldown = E.noop

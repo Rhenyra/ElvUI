@@ -89,6 +89,16 @@ function UF:Update_PartyHeader(header, db)
 	local headerHolder = header:GetParent()
 	headerHolder.db = db
 
+	if not InCombatLockdown() then
+		header:SetAttribute("showPlayer", db.showPlayer)
+		header:SetAttribute("sortDir", db.sortDir)
+		if UF.headerGroupBy[db.groupBy] then
+			UF.headerGroupBy[db.groupBy](header)
+		else
+			UF.headerGroupBy["GROUP"](header)
+		end
+	end
+
 	if not headerHolder.positioned then
 		headerHolder:ClearAllPoints()
 		headerHolder:Point("BOTTOMLEFT", E.UIParent, "BOTTOMLEFT", 4, 195)
@@ -105,6 +115,7 @@ function UF:Update_PartyHeader(header, db)
 end
 
 function UF:PartySmartVisibility(event)
+	local start = debugprofilestop()
 	if not self.db or (self.db and not self.db.enable) or (UF.db and not UF.db.smartRaidFilter) or self.isForced then
 		self.blockVisibilityChanges = false
 		return
@@ -117,15 +128,27 @@ function UF:PartySmartVisibility(event)
 	if not InCombatLockdown() then
 		local _, instanceType = GetInstanceInfo()
 		if instanceType == "raid" or instanceType == "pvp" then
-			UnregisterStateDriver(self, "visibility")
-			self.blockVisibilityChanges = true
-			self:Hide()
+			if not self._inBlockMode then
+				UnregisterStateDriver(self, "visibility")
+				self.blockVisibilityChanges = true
+				self:Hide()
+				self._inBlockMode = true
+				self._activeStateDriver = nil
+			end
 		elseif self.db.visibility then
-			RegisterStateDriver(self, "visibility", self.db.visibility)
+			self._inBlockMode = false
+			if self._activeStateDriver ~= self.db.visibility then
+				RegisterStateDriver(self, "visibility", self.db.visibility)
+				self._activeStateDriver = self.db.visibility
+			end
 			self.blockVisibilityChanges = false
 		end
 	else
 		self:RegisterEvent("PLAYER_REGEN_ENABLED")
+	end
+	local elapsed = debugprofilestop() - start
+	if elapsed > 1 then
+		_G.ElvUI_LogDiagnostic(string.format("[Profile] PartySmartVisibility took: %.2f ms", elapsed))
 	end
 end
 
@@ -222,6 +245,8 @@ function UF:Update_PartyFrames(frame, db)
 				frame:SetAttribute("initial-height", frame.UNIT_HEIGHT)
 			end
 		end
+
+		frame.db = childDB
 
 		--Health
 		UF:Configure_HealthBar(frame)

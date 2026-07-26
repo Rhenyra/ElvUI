@@ -324,6 +324,8 @@ function A:ConfigureAuras(header, auraTable, weaponPosition)
 		end
 		local buffInfo = auraTable[i]
 		button:SetID(buffInfo.index)
+		button.spellID = buffInfo.spellID
+		button.name = buffInfo.name
 
 		if buffInfo.duration > 0 and buffInfo.expires then
 			A:SetAuraTime(button, buffInfo.expires - GetTime(), buffInfo.duration)
@@ -373,15 +375,17 @@ function A:ConfigureAuras(header, auraTable, weaponPosition)
 				expiring = exitTime < GetTime()
 			end
 
-			if E.db.auras.mergeVanity and not expiring and C_VanityCollection.IsConsolidatedVanityBuff(buffInfo.spellID) then
+			local isVanity = C_VanityCollection.IsConsolidatedVanityBuff(buffInfo.spellID) or (buffInfo.name and string.find(buffInfo.name, "Keeper's Scroll", 1, true)) or (buffInfo.spellID and ((buffInfo.spellID >= 91700 and buffInfo.spellID <= 91899) or (buffInfo.spellID >= 993900 and buffInfo.spellID <= 993999)))
+			if E.db.auras.mergeVanity and isVanity then
 				button:SetParent(ElvuiVanityBuffsTooltip)
 				button:Show()
 				vanityButton[#vanityButton+1] = button
-				if exitTime > 0 then 
+				local actualExitTime = buffInfo.expires
+				if actualExitTime > 0 then 
 					if expiringVanityOrConsolidated > 0 then
-						expiringVanityOrConsolidated = min(expiringVanityOrConsolidated, exitTime)
+						expiringVanityOrConsolidated = min(expiringVanityOrConsolidated, actualExitTime)
 					else
-						expiringVanityOrConsolidated = exitTime
+						expiringVanityOrConsolidated = actualExitTime
 					end
 				end
 			elseif E.db.auras.mergeConsolidated and not expiring and buffInfo.shouldConsolidate then
@@ -694,7 +698,12 @@ function A:CreateAuraHeader(filter)
 	header:SetScript("OnEvent", function(self, _, unit)
 		if unit ~= "player" then return end
 
-		A:UpdateHeader(self)
+		if not self.debounceTimer then
+			self.debounceTimer = E:ScheduleTimer(function()
+				self.debounceTimer = nil
+				A:UpdateHeader(self)
+			end, 0.05)
+		end
 	end)
 
 	self:UpdateHeader(header)
@@ -703,26 +712,115 @@ function A:CreateAuraHeader(filter)
 end
 
 function A:ActuallyUpdateAllAnchors(buttons, tooltip)
-	local index = 0
-	db = self.db.buffs
-	local xOffset, wrapYOffset
+	local db = self.db.buffs
 	local size = db.size
+	local xOffset = db.horizontalSpacing + size
+	local wrapYOffset = (db.verticalSpacing + size) * -1
 	local wrapAfter = 4
 	local offset = floor(size / 2)
 
-	xOffset = db.horizontalSpacing + size
-	wrapYOffset = (db.verticalSpacing + size) * -1
+	if tooltip == ElvuiVanityBuffsTooltip then
+		-- Split buttons into World Buffs and Vanity & Others
+		local worldBuffs = {}
+		local vanityOthers = {}
 
-	for _, buff in pairs(buttons) do
-		index = index + 1
-		local tick, cycle = floor((index - 1) % wrapAfter), floor((index - 1) / wrapAfter)
-		buff:ClearAllPoints()
-		buff:SetPoint("TOPLEFT", tooltip, offset + tick * xOffset, cycle * wrapYOffset - offset)
-		buff:SetSize(size, size)
+		for _, buff in ipairs(buttons) do
+			local spellID = buff.spellID
+			local name = buff.name
+			local isWorld = (name and string.find(name, "Keeper's Scroll", 1, true))
+				or (spellID and ((spellID >= 91700 and spellID <= 91899) or (spellID >= 993900 and spellID <= 993999)))
+
+			if isWorld then
+				table.insert(worldBuffs, buff)
+			else
+				table.insert(vanityOthers, buff)
+			end
+		end
+
+		-- Lazy construct header strings if they don't exist yet
+		if not tooltip.worldHeader then
+			tooltip.worldHeader = tooltip:CreateFontString(nil, "OVERLAY")
+			tooltip.worldHeader:SetFont(E.media.normFont, 14, "OUTLINE")
+			tooltip.worldHeader:SetTextColor(1, 0.82, 0) -- Gold color
+			tooltip.worldHeader:SetText("World Buffs")
+		end
+		if not tooltip.vanityHeader then
+			tooltip.vanityHeader = tooltip:CreateFontString(nil, "OVERLAY")
+			tooltip.vanityHeader:SetFont(E.media.normFont, 14, "OUTLINE")
+			tooltip.vanityHeader:SetTextColor(1, 0.82, 0) -- Gold color
+			tooltip.vanityHeader:SetText("Vanity & Others")
+		end
+
+		local br, bg, bb = unpack(E.media.backdropcolor)
+		tooltip:SetBackdropColor(br, bg, bb, 0.8)
+
+		-- Position headers and buttons
+		local currentY = -8
+		local maxWidth = 120
+
+		-- 1. Render World Buffs if any
+		if #worldBuffs > 0 then
+			tooltip.worldHeader:ClearAllPoints()
+			tooltip.worldHeader:SetPoint("TOP", tooltip, "TOP", 0, currentY)
+			tooltip.worldHeader:Show()
+			currentY = currentY - 18
+
+			for i, buff in ipairs(worldBuffs) do
+				local tick, cycle = floor((i - 1) % wrapAfter), floor((i - 1) / wrapAfter)
+				buff:ClearAllPoints()
+				buff:SetPoint("TOPLEFT", tooltip, "TOPLEFT", 8 + tick * xOffset, currentY + cycle * wrapYOffset)
+				buff:SetSize(size, size)
+			end
+
+			local rows = floor((#worldBuffs + wrapAfter - 1) / wrapAfter)
+			currentY = currentY + rows * wrapYOffset - 8
+			local cols = min(#worldBuffs, wrapAfter)
+			local width = 16 + cols * size + (cols - 1) * db.horizontalSpacing
+			if width > maxWidth then maxWidth = width end
+		else
+			tooltip.worldHeader:Hide()
+		end
+
+		-- 2. Render Vanity & Others if any
+		if #vanityOthers > 0 then
+			tooltip.vanityHeader:ClearAllPoints()
+			tooltip.vanityHeader:SetPoint("TOP", tooltip, "TOP", 0, currentY)
+			tooltip.vanityHeader:Show()
+			currentY = currentY - 18
+
+			for i, buff in ipairs(vanityOthers) do
+				local tick, cycle = floor((i - 1) % wrapAfter), floor((i - 1) / wrapAfter)
+				buff:ClearAllPoints()
+				buff:SetPoint("TOPLEFT", tooltip, "TOPLEFT", 8 + tick * xOffset, currentY + cycle * wrapYOffset)
+				buff:SetSize(size, size)
+			end
+
+			local rows = floor((#vanityOthers + wrapAfter - 1) / wrapAfter)
+			currentY = currentY + rows * wrapYOffset
+			local cols = min(#vanityOthers, wrapAfter)
+			local width = 16 + cols * size + (cols - 1) * db.horizontalSpacing
+			if width > maxWidth then maxWidth = width end
+		else
+			tooltip.vanityHeader:Hide()
+		end
+
+		-- Set dimensions
+		tooltip:SetWidth(maxWidth)
+		tooltip:SetHeight(math.abs(currentY) + 8)
+	else
+		-- Standard consolidated buffs layout
+		local index = 0
+		for _, buff in pairs(buttons) do
+			index = index + 1
+			local tick, cycle = floor((index - 1) % wrapAfter), floor((index - 1) / wrapAfter)
+			buff:ClearAllPoints()
+			buff:SetPoint("TOPLEFT", tooltip, offset + tick * xOffset, cycle * wrapYOffset - offset)
+			buff:SetSize(size, size)
+		end
+		local wm, hm = min(index, wrapAfter), floor((index + wrapAfter - 1) / wrapAfter)
+		tooltip:SetWidth(size + wm * size + (wm - 1) * db.horizontalSpacing)
+		tooltip:SetHeight(offset + hm * size + hm * db.verticalSpacing)
 	end
-	local wm, hm = min(index, wrapAfter), floor((index + wrapAfter - 1) / wrapAfter)
-	tooltip:SetWidth( size + wm * size + (wm - 1) * db.horizontalSpacing)
-	tooltip:SetHeight( offset + hm * size + hm * db.verticalSpacing)
 end
 
 function A:ElvuiConsolidatedBuffs_UpdateAllAnchors()

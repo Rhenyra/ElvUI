@@ -81,6 +81,21 @@ local targetSlots = {}
 local specialtyBags = {}
 local emptySlots = {}
 
+-- Cache for GetItemInfo results during a sort pass.
+-- Sort comparators run O(N log N) times on the same itemIDs.
+-- Without this, a 200-item bag triggers 3000+ GetItemInfo calls in one frame.
+local sortInfoCache = {}
+local function GetCachedItemInfo(itemID)
+	if not itemID then return end
+	local c = sortInfoCache[itemID]
+	if not c then
+		local name, _, quality, ilvl, _, iType, iSubType, stackSize, equipLoc, _, price = GetItemInfo(itemID)
+		c = {name, quality, ilvl, iType, iSubType, stackSize, equipLoc, price}
+		sortInfoCache[itemID] = c
+	end
+	return c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8]
+end
+
 local moveRetries = 0
 local moveTracker = {}
 local lastItemID, lockStop, lastDestination, lastMove
@@ -170,8 +185,8 @@ local function UpdateLocation(from, to)
 end
 
 local function PrimarySort(a, b)
-	local aName, _, _, aLvl, _, _, _, _, _, _, aPrice = GetItemInfo(bagIDs[a])
-	local bName, _, _, bLvl, _, _, _, _, _, _, bPrice = GetItemInfo(bagIDs[b])
+	local aName, _, aLvl, _, _, _, _, aPrice = GetCachedItemInfo(bagIDs[a])
+	local bName, _, bLvl, _, _, _, _, bPrice = GetCachedItemInfo(bagIDs[b])
 
 	if aLvl ~= bLvl and aLvl and bLvl then
 		return aLvl > bLvl
@@ -203,8 +218,8 @@ local function DefaultSort(a, b)
 		end
 	end
 
-	local _, _, _, _, _, aType, aSubType, _, aEquipLoc = GetItemInfo(aID)
-	local _, _, _, _, _, bType, bSubType, _, bEquipLoc = GetItemInfo(bID)
+	local _, _, _, aType, aSubType, _, aEquipLoc = GetCachedItemInfo(aID)
+	local _, _, _, bType, bSubType, _, bEquipLoc = GetCachedItemInfo(bID)
 
 	local aRarity, bRarity = bagQualities[a], bagQualities[b]
 
@@ -409,9 +424,11 @@ function B:ScanBags()
 		local itemLink = B:GetItemLink(bag, slot)
 		local itemID = B:ConvertLinkToID(itemLink)
 		if itemID then
-			bagMaxStacks[bagSlot] = select(8, GetItemInfo(itemID))
+			-- Use GetCachedItemInfo which returns: name, quality, ilvl, iType, iSubType, stackSize, ...
+			local _, quality, _, _, _, stackSize = GetCachedItemInfo(itemID)
+			bagMaxStacks[bagSlot] = stackSize
 			bagIDs[bagSlot] = itemID
-			bagQualities[bagSlot] = select(3, GetItemInfo(itemLink))
+			bagQualities[bagSlot] = quality
 			bagStacks[bagSlot] = select(2, B:GetItemInfo(bag, slot))
 		end
 	end
@@ -443,9 +460,9 @@ function B:CanItemGoInBag(bag, slot, targetBag)
 			itemFamily = 1
 		end
 	end
-	local bagFamily = select(2, GetContainerNumFreeSlots(targetBag))
-	if itemFamily then
-		return (bagFamily == 0) or band(itemFamily, bagFamily) > 0
+	local bagFamily = select(2, GetContainerNumFreeSlots(targetBag)) or 0
+	if itemFamily and type(itemFamily) == "number" and type(bagFamily) == "number" then
+		return (bagFamily == 0) or (band(itemFamily, bagFamily) > 0)
 	else
 		return false
 	end
@@ -585,6 +602,8 @@ function B.Sort(bags, sorter, invertDirection)
 
 	wipe(bagSorted)
 	wipe(initialOrder)
+	-- Clear the per-sort GetItemInfo cache
+	wipe(sortInfoCache)
 end
 
 function B.FillBags(from, to)
@@ -674,6 +693,7 @@ function B.SortBags(...)
 				B.Sort(bagCache.Normal, nil, actualReverse)
 				wipe(bagCache.Normal)
 			end
+			
 			wipe(bagCache)
 			wipe(bagGroups)
 		end
@@ -695,28 +715,44 @@ function B:StartStacking()
 end
 
 function B:RegisterUpdateDelayed()
-	local shouldUpdateFade
-
+	-- Collect all bagFrames that need updating first
+	local pendingFrames = {}
 	for _, bagFrame in pairs(B.BagFrames) do
 		if bagFrame.registerUpdate then
-			B:UpdateAllSlots(bagFrame)
-
-			bagFrame:RegisterBucketEvent("BAG_UPDATE", 0.2, "BagUpdate")
-			bagFrame:RegisterEvent("BAG_UPDATE_COOLDOWN")
-
-			for _, event in pairs(bagFrame.events) do
-				bagFrame:RegisterEvent(event)
-			end
-
-			bagFrame.registerUpdate = nil
-			shouldUpdateFade = true -- we should refresh the bag search after sorting
+			pendingFrames[#pendingFrames + 1] = bagFrame
 		end
 	end
 
-	if shouldUpdateFade then
-		B:RefreshSearch() -- this will clear the bag lock look during a sort
+	if #pendingFrames == 0 then return end
+
+	-- Process one bagFrame per frame to avoid a synchronous all-at-once update
+	-- that can drop FPS to 1 on large bag sets (bank + player bags + guild bank).
+	local function processNext(index)
+		local bagFrame = pendingFrames[index]
+		if not bagFrame then
+			-- All done — re-register events and refresh search
+			B:RefreshSearch()
+			return
+		end
+
+		B:UpdateAllSlots(bagFrame)
+
+		bagFrame:RegisterBucketEvent("BAG_UPDATE", 0.2, "BagUpdate")
+		bagFrame:RegisterEvent("BAG_UPDATE_COOLDOWN")
+
+		for _, event in pairs(bagFrame.events) do
+			bagFrame:RegisterEvent(event)
+		end
+
+		bagFrame.registerUpdate = nil
+
+		-- Schedule the next bag frame for the following frame
+		E:Delay(0, function() processNext(index + 1) end)
 	end
+
+	processNext(1)
 end
+
 
 function B:StopStacking(message, noUpdate)
 	wipe(moves)
@@ -788,6 +824,7 @@ function B:DoMove(move)
 end
 
 function B:DoMoves()
+
 	if InCombatLockdown() then
 		return B:StopStacking(L["Confused.. Try Again!"])
 	end
@@ -884,42 +921,42 @@ function B:GetGroup(id)
 	return coreGroups[id]
 end
 
-function B:CommandDecorator(func, groupsDefaults)
-	return function(reverse)
-		if B.SortUpdateTimer:IsShown() then
-			B:StopStacking(L["Already Running.. Bailing Out!"], true)
-			return
-		end
-
-		wipe(bagGroups)
-		
-		-- Handle the bag groups
-		local groups = groupsDefaults
-		
-		for bags in gmatch((groups or ""), "%S+") do
-			if bags == "guild" then
-				bags = B:GetGroup(bags)
-				if bags then
-					tinsert(bagGroups, {bags[GetCurrentGuildBankTab()]})
-				end
-			else
-				bags = B:GetGroup(bags)
-				if bags then
-					tinsert(bagGroups, bags)
+	function B:CommandDecorator(func, groupsDefaults)
+		return function(reverse)
+			if B.SortUpdateTimer:IsShown() then
+				B:StopStacking(L["Already Running.. Bailing Out!"], true)
+				return
+			end
+	
+			wipe(bagGroups)
+			
+			-- Handle the bag groups
+			local groups = groupsDefaults
+			
+			for bags in gmatch((groups or ""), "%S+") do
+				if bags == "guild" then
+					bags = B:GetGroup(bags)
+					if bags then
+						tinsert(bagGroups, {bags[GetCurrentGuildBankTab()]})
+					end
+				else
+					bags = B:GetGroup(bags)
+					if bags then
+						tinsert(bagGroups, bags)
+					end
 				end
 			end
+	
+			B:ScanBags()
+			
+			-- Pass reverse parameter if it's not nil (even if it's false)
+			if reverse ~= nil then
+				func(reverse, unpack(bagGroups))
+			else
+				func(unpack(bagGroups))
+			end
+			
+			wipe(bagGroups)
+			B:StartStacking()
 		end
-
-		B:ScanBags()
-		
-		-- Pass reverse parameter if it's not nil (even if it's false)
-		if reverse ~= nil then
-			func(reverse, unpack(bagGroups))
-		else
-			func(unpack(bagGroups))
-		end
-		
-		wipe(bagGroups)
-		B:StartStacking()
 	end
-end

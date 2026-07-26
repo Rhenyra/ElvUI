@@ -15,8 +15,26 @@ local ROTATIONS_PER_SECOND = ROTATIONS_PER_SECOND
 
 local modelFrames = {
 	"DressUpModel",
-	"PetStableModel"
+	"PetStableModel",
+	"StoreCollectionFramePaperModelPreview",
+	"StoreCollectionFrameModelPreview",
+	"AscensionCollectionModel",
+	"AscensionCollectionFrameModel",
+	"AscensionVanityModel",
+	"AscensionVanityFrameModel",
+	"AscensionVanityCollectionModel",
+	"AscensionVanityCollectionFrameModel",
+	"AscensionWardrobeModel",
+	"AscensionWardrobeFrameModel",
+	"CollectionModel",
+	"CollectionFrameModel",
+	"WardrobeModel",
+	"WardrobeFrameModel",
+	"VanityModel",
+	"VanityFrameModel"
 }
+
+local hookedModels = {}
 
 local modelSettings = {
 	["HumanMale"] = {panMaxLeft = -0.4, panMaxRight = 0.4, panMaxTop = 1.2, panMaxBottom = -0.3, panValue = 38},
@@ -192,6 +210,59 @@ function MF:ModelWithControls(model)
 		end
 	end)
 
+	local zoomSlider = CreateFrame("Slider", "$parentZoomSlider", model)
+	zoomSlider:SetWidth(10)
+	zoomSlider:Point("TOPRIGHT", model, "TOPRIGHT", -8, -40)
+	zoomSlider:Point("BOTTOMRIGHT", model, "BOTTOMRIGHT", -8, 40)
+	zoomSlider:SetOrientation("VERTICAL")
+	zoomSlider:SetMinMaxValues(-30, 2.8)
+	zoomSlider:SetValue(2.8)
+	zoomSlider:Hide()
+
+	zoomSlider:SetTemplate("Default")
+	local thumb = zoomSlider:CreateTexture(nil, "ARTWORK")
+	thumb:SetTexture(E.media.blankTex)
+	thumb:SetVertexColor(unpack(E.media.rgbvaluecolor))
+	thumb:SetSize(8, 12)
+	zoomSlider:SetThumbTexture(thumb)
+
+	zoomSlider:SetScript("OnValueChanged", function(self, value)
+		local modelFrame = self:GetParent()
+		if self.updating then return end
+
+		local maxZoom = 2.8
+		local minZoom = -30
+		local zoomLevel = maxZoom - (value - minZoom)
+
+		local _, y, z = modelFrame:GetPosition()
+		modelFrame:SetPosition(zoomLevel, y, z)
+		modelFrame.zoomLevel = zoomLevel
+	end)
+
+	zoomSlider:SetScript("OnEnter", function(self)
+		local modelFrame = self:GetParent()
+		modelFrame.controlFrame:Show()
+		self:Show()
+	end)
+
+	zoomSlider:SetScript("OnLeave", function(self)
+		local modelFrame = self:GetParent()
+		if not modelFrame:IsMouseOver() and not modelFrame.controlFrame:IsMouseOver() then
+			modelFrame.controlFrame:Hide()
+			self:Hide()
+		end
+	end)
+
+	model.zoomSlider = zoomSlider
+
+	model.controlFrame:SetScript("OnLeave", function(self)
+		local modelFrame = self:GetParent()
+		if not modelFrame:IsMouseOver() and (not modelFrame.zoomSlider or not modelFrame.zoomSlider:IsMouseOver()) then
+			self:Hide()
+			if modelFrame.zoomSlider then modelFrame.zoomSlider:Hide() end
+		end
+	end)
+
 	self:HookScript(model, "OnUpdate", "Model_OnUpdate")
 	model:SetScript("OnMouseWheel", function(self, delta)
 		MF:Model_OnMouseWheel(self, delta)
@@ -212,10 +283,12 @@ function MF:ModelWithControls(model)
 	end)
 	model:SetScript("OnEnter", function(self)
 		self.controlFrame:Show()
+		if self.zoomSlider then self.zoomSlider:Show() end
 	end)
 	model:SetScript("OnLeave", function(self)
-		if not self.controlFrame:IsMouseOver() and not ModelPanningFrame:IsShown() then
+		if not self.controlFrame:IsMouseOver() and (not self.zoomSlider or not self.zoomSlider:IsMouseOver()) and not ModelPanningFrame:IsShown() then
 			self.controlFrame:Hide()
+			if self.zoomSlider then self.zoomSlider:Hide() end
 		end
 	end)
 	model:SetScript("OnHide", function(self)
@@ -226,11 +299,27 @@ function MF:ModelWithControls(model)
 		self.controlFrame:Hide()
 		MF:Model_Reset(self)
 	end)
+	model:HookScript("OnShow", function(self)
+		self.zoomLevel = 0
+		MF:UpdateZoomSlider(self)
+	end)
+end
+
+function MF:UpdateZoomSlider(model)
+	local slider = model.zoomSlider
+	if slider then
+		local maxZoom = 2.8
+		local minZoom = -30
+		slider.updating = true
+		local value = maxZoom + minZoom - (model.zoomLevel or 0)
+		slider:SetValue(value)
+		slider.updating = false
+	end
 end
 
 function MF:Model_OnMouseWheel(model, delta, maxZoom, minZoom)
 	maxZoom = maxZoom or 2.8
-	minZoom = minZoom or 0
+	minZoom = minZoom or -30
 	local zoomLevel = model.zoomLevel or minZoom
 	zoomLevel = zoomLevel + delta * 0.5
 	zoomLevel = min(zoomLevel, maxZoom)
@@ -238,6 +327,7 @@ function MF:Model_OnMouseWheel(model, delta, maxZoom, minZoom)
 	local _, y, z = model:GetPosition()
 	model:SetPosition(zoomLevel, y, z)
 	model.zoomLevel = zoomLevel
+	MF:UpdateZoomSlider(model)
 end
 
 function MF:Model_OnMouseDown(model, button)
@@ -264,7 +354,7 @@ function MF:Model_OnUpdate(frame, elapsedTime, rotationsPerSecond)
 			local diff = (cursorX - frame.rotationCursorStart) * 0.010
 
 			frame.rotationCursorStart = cursorX
-			frame.rotation = frame.rotation + diff
+			frame.rotation = (frame.rotation or frame:GetFacing() or 0.61) + diff
 
 			if frame.rotation < 0 then
 				frame.rotation = frame.rotation + (2 * PI)
@@ -282,9 +372,9 @@ function MF:Model_OnUpdate(frame, elapsedTime, rotationsPerSecond)
 		local scale = UIParent:GetEffectiveScale()
 		ModelPanningFrame:Point("BOTTOMLEFT", cursorX / scale - 16, cursorY / scale - 16)	-- half the texture size to center it on the cursor
 		-- settings
-		local settings = modelSettings[playerRaceSex]
+		local settings = modelSettings[playerRaceSex] or modelSettings["HumanMale"]
 
-		local zoom = 1 + (frame.zoomLevel or 0)
+		local zoom = max(1.0, 1 + (frame.zoomLevel or 0))
 
 		-- Panning should require roughly the same mouse movement regardless of zoom level so the model moves at the same rate as the cursor
 		-- This formula more or less works for all zoom levels, found via trial and error
@@ -297,16 +387,17 @@ function MF:Model_OnUpdate(frame, elapsedTime, rotationsPerSecond)
 		-- bounds
 		scale = scale * modelScale
 
-		local maxCameraY = settings.panMaxRight * zoom * scale
+		local boundsMultiplier = 50
+		local maxCameraY = settings.panMaxRight * zoom * scale * boundsMultiplier
 		cameraY = min(cameraY, maxCameraY)
 
-		local minCameraY = settings.panMaxLeft * zoom * scale
+		local minCameraY = settings.panMaxLeft * zoom * scale * boundsMultiplier
 		cameraY = max(cameraY, minCameraY)
 
-		local maxCameraZ = settings.panMaxTop * zoom * scale
+		local maxCameraZ = settings.panMaxTop * zoom * scale * boundsMultiplier
 		cameraZ = min(cameraZ, maxCameraZ)
 
-		local minCameraZ = settings.panMaxBottom * zoom * scale
+		local minCameraZ = settings.panMaxBottom * zoom * scale * boundsMultiplier
 		cameraZ = max(cameraZ, minCameraZ)
 
 		frame:SetPosition(frame.cameraX, cameraY, cameraZ)
@@ -323,27 +414,33 @@ function MF:Model_OnUpdate(frame, elapsedTime, rotationsPerSecond)
 	end
 
 	if leftButton and leftButton:GetButtonState() == "PUSHED" then
-		frame.rotation = frame.rotation + (elapsedTime * 2 * PI * rotationsPerSecond)
+		frame.rotation = (frame.rotation or frame:GetFacing() or 0.61) + (elapsedTime * 2 * PI * rotationsPerSecond)
 
 		if frame.rotation < 0 then
 			frame.rotation = frame.rotation + (2 * PI)
 		end
+		frame:SetRotation(frame.rotation)
 	elseif rightButton and rightButton:GetButtonState() == "PUSHED" then
-		frame.rotation = frame.rotation - (elapsedTime * 2 * PI * rotationsPerSecond)
+		frame.rotation = (frame.rotation or frame:GetFacing() or 0.61) - (elapsedTime * 2 * PI * rotationsPerSecond)
 
 		if frame.rotation > (2 * PI) then
 			frame.rotation = frame.rotation - (2 * PI)
 		end
+		frame:SetRotation(frame.rotation)
 	end
-
-	frame:SetRotation(frame.rotation)
 end
 
 function MF:Model_Reset(model)
+	local modelName = model:GetName()
+	if model.Reset and (modelName == "DressUpModel" or modelName == "PetStableModel" or modelName == "InspectModelFrame" or modelName == "AuctionDressUpModel") then
+		model:Reset()
+	else
+		model:SetPosition(0, 0, 0)
+	end
 	model.rotation = 0.61
 	model:SetRotation(model.rotation)
 	model.zoomLevel = 0
-	model:SetPosition(0, 0, 0)
+	MF:UpdateZoomSlider(model)
 end
 
 function MF:Model_StartPanning(model, usePanningFrame)
@@ -379,37 +476,37 @@ function MF:ModelControlButton_OnMouseUp(model)
 	model:GetParent().buttonDown = nil
 end
 
+function MF:HookModel(modelName)
+	if hookedModels[modelName] then return end
+	local model = _G[modelName]
+	if model and model.EnableMouse then
+		model:EnableMouse(true)
+		model:EnableMouseWheel(true)
+
+		local leftBtn = _G[modelName.."RotateLeftButton"]
+		if leftBtn and leftBtn.Kill then leftBtn:Kill() end
+		local rightBtn = _G[modelName.."RotateRightButton"]
+		if rightBtn and rightBtn.Kill then rightBtn:Kill() end
+
+		self:ModelWithControls(model)
+		hookedModels[modelName] = true
+	end
+end
+
 function MF:ADDON_LOADED(event, addon)
 	if addon == "Blizzard_InspectUI" then
-		InspectModelFrame:EnableMouse(true)
-		InspectModelFrame:EnableMouseWheel(true)
-
-		InspectModelRotateLeftButton:Kill()
-		InspectModelRotateRightButton:Kill()
-
-		self:ModelWithControls(InspectModelFrame)
+		self:HookModel("InspectModelFrame")
 	elseif addon == "Blizzard_AuctionUI" then
-		AuctionDressUpModel:EnableMouse(true)
-		AuctionDressUpModel:EnableMouseWheel(true)
-
-		AuctionDressUpModelRotateLeftButton:Kill()
-		AuctionDressUpModelRotateRightButton:Kill()
-
-		self:ModelWithControls(AuctionDressUpModel)
+		self:HookModel("AuctionDressUpModel")
+	end
+	for i = 1, #modelFrames do
+		self:HookModel(modelFrames[i])
 	end
 end
 
 function MF:Initialize()
 	for i = 1, #modelFrames do
-		local model = _G[modelFrames[i]]
-
-		model:EnableMouse(true)
-		model:EnableMouseWheel(true)
-
-		_G[modelFrames[i].."RotateLeftButton"]:Kill()
-		_G[modelFrames[i].."RotateRightButton"]:Kill()
-
-		self:ModelWithControls(model)
+		self:HookModel(modelFrames[i])
 	end
 
 	local modelPanning = CreateFrame("Frame", "ModelPanningFrame", UIParent)

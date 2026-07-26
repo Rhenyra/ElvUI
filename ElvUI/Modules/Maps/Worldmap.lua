@@ -79,22 +79,27 @@ function M:PLAYER_REGEN_DISABLED()
 end
 
 local t = 0
+local playerT = 0
 local function UpdateCoords(self, elapsed)
 	t = t + elapsed
+	playerT = playerT + (elapsed or 0)
 	if t < 0.03333 then return end
 	t = 0
 
-	local x, y = GetPlayerMapPosition("player")
+	if playerT >= 0.2 then
+		playerT = 0
+		local x, y = GetPlayerMapPosition("player")
 
-	if self.playerCoords.x ~= x or self.playerCoords.y ~= y then
-		if x ~= 0 or y ~= 0 then
-			self.playerCoords.x = x
-			self.playerCoords.y = y
-			self.playerCoords:SetFormattedText("%s:   %.2f, %.2f", PLAYER, x * 100, y * 100)
-		else
-			self.playerCoords.x = nil
-			self.playerCoords.y = nil
-			self.playerCoords:SetFormattedText("%s:   %s", PLAYER, "N/A")
+		if self.playerCoords.x ~= x or self.playerCoords.y ~= y then
+			if x ~= 0 or y ~= 0 then
+				self.playerCoords.x = x
+				self.playerCoords.y = y
+				self.playerCoords:SetFormattedText("%s:   %.2f, %.2f", PLAYER, x * 100, y * 100)
+			else
+				self.playerCoords.x = nil
+				self.playerCoords.y = nil
+				self.playerCoords:SetFormattedText("%s:   %s", PLAYER, "N/A")
+			end
 		end
 	end
 
@@ -220,7 +225,7 @@ function M:Initialize()
 	-- Mapster needs mouse events for dragging the map
 	if not mapsterEnabled then
 		WorldMapFrame:EnableMouse(false)
-		WorldMapFrame.EnableMouse = E.noop
+		-- WorldMapFrame.EnableMouse = E.noop
 	end
 
 	if E.global.general.smallerWorldMap then
@@ -229,10 +234,10 @@ function M:Initialize()
 			BlackoutWorld:SetTexture(nil)
 
 			WorldMapFrame:SetParent(UIParent)
-			WorldMapFrame.SetParent = E.noop
+			-- WorldMapFrame.SetParent = E.noop
 
 			WorldMapFrame:EnableKeyboard(false)
-			WorldMapFrame.EnableKeyboard = E.noop
+			-- WorldMapFrame.EnableKeyboard = E.noop
 		end
 
 		if not GetCVarBool("miniWorldMap") then

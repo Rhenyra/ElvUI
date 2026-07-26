@@ -65,6 +65,22 @@ S:AddCallbackForAddon("Ascension_InspectUI", "Skin_InspectUI", function ()
 	end)
 
 	-- Handle item inspect frame
+	-- Retry callback used when GetItemInfo returns nil (item not yet in cache).
+	-- E:Delay(0.1, awaitCache, button) calls awaitCache(button) after 0.1s.
+	local function awaitCache(button)
+		if not (AscensionInspectFrame and AscensionInspectFrame.unit) then return end
+		local itemID = GetInventoryItemID(AscensionInspectFrame.unit, button:GetID())
+		if itemID then
+			local _, _, quality = GetItemInfo(itemID)
+			if quality then
+				button.backdrop:SetBackdropBorderColor(GetItemQualityColor(quality))
+				return
+			end
+		end
+		-- Still not cached — fall back to default border color
+		button.backdrop:SetBackdropBorderColor(unpack(E.media.bordercolor))
+	end
+
 	local slots = {
 		[1] = AscensionInspectHeadSlot,
 		[2] = AscensionInspectNeckSlot,

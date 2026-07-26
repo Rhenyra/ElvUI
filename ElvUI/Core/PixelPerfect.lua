@@ -5,6 +5,10 @@ local min, max, abs, floor = min, max, abs, floor
 --WoW API / Variables
 local UIParent = UIParent
 
+E.mult = 1
+E.Spacing = 0
+E.Border = 1
+
 function E:IsEyefinity(width, height)
 	if E.global.general.eyefinity and width >= 3840 then
 		--HQ resolution

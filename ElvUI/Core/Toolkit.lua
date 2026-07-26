@@ -52,8 +52,8 @@ local function Point(obj, arg1, arg2, arg3, arg4, arg5)
 end
 
 local function SetOutside(obj, anchor, xOffset, yOffset, anchor2)
-	xOffset = xOffset or E.Border
-	yOffset = yOffset or E.Border
+	xOffset = xOffset or E.Border or 1
+	yOffset = yOffset or xOffset
 	anchor = anchor or obj:GetParent()
 
 	assert(anchor)
@@ -66,8 +66,8 @@ local function SetOutside(obj, anchor, xOffset, yOffset, anchor2)
 end
 
 local function SetInside(obj, anchor, xOffset, yOffset, anchor2)
-	xOffset = xOffset or E.Border
-	yOffset = yOffset or E.Border
+	xOffset = xOffset or E.Border or 1
+	yOffset = yOffset or xOffset
 	anchor = anchor or obj:GetParent()
 
 	assert(anchor)

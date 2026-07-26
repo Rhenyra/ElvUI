@@ -201,7 +201,7 @@ S:AddCallback("Skin_WorldMap", function()
 
 	if not E.private.worldmap.enable and not mapsterEnabled then
 		WorldMapFrame:EnableMouse(false)
-		WorldMapFrame.EnableMouse = E.noop
+		-- WorldMapFrame.EnableMouse = E.noop
 	end
 
 	WorldMapTitleButton:Hide()

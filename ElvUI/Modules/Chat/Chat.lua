@@ -69,10 +69,12 @@ local NUM_CHAT_WINDOWS = NUM_CHAT_WINDOWS
 local RAID_WARNING = RAID_WARNING
 
 local throttle = {}
+local lastThrottlePrune = 0
 
 CH.GuidCache = {}
 CH.ClassNames = {}
 CH.Keywords = {}
+CH.KeywordsLower = {} -- lowered copies for the cheap substring pre-check in CheckKeyword
 CH.Smileys = {}
 
 local DEFAULT_STRINGS = {
@@ -381,9 +383,9 @@ function CH:StyleChat(frame)
 			LeftChatPanel.editboxforced = nil
 			if LeftChatPanel:IsShown() then
 				LeftChatToggleButton:GetScript("OnLeave")(LeftChatToggleButton)
-				editBox:Hide()
 			end
 		end
+		editBox:Hide()
 	end)
 
 	language:Height(22)
@@ -419,6 +421,118 @@ function CH:StyleChat(frame)
 			button:SetAlpha(0.35)
 		else
 			button:SetAlpha(0)
+		end
+	end)
+
+
+
+	-- Minimalist scrollbar (thicker)
+	local slider = CreateFrame("Slider", format("ChatFrame%dScrollbar", id), frame)
+	slider:SetWidth(12)
+	slider:Point("TOPRIGHT", frame, "TOPRIGHT", -4, -18)
+	slider:Point("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -4, 4)
+	slider:SetOrientation("VERTICAL")
+	slider:SetFrameLevel(frame:GetFrameLevel() + 5)
+	slider:Hide()
+
+	local track = slider:CreateTexture(nil, "BACKGROUND")
+	track:SetWidth(8)
+	track:SetPoint("TOP", slider, "TOP")
+	track:SetPoint("BOTTOM", slider, "BOTTOM")
+	track:SetTexture("Interface\\Buttons\\WHITE8x8")
+	track:SetVertexColor(0.05, 0.05, 0.05, 0.6)
+
+	slider:SetThumbTexture("Interface\\Buttons\\WHITE8x8")
+	local thumb = slider:GetThumbTexture()
+	if thumb then
+		thumb:SetSize(8, 24)
+		thumb:SetVertexColor(0.2, 0.6, 1, 0.8)
+	end
+
+	local updatingSlider = false
+	local function UpdateSlider()
+		if not CH.db.scrollBar then
+			slider:Hide()
+			return
+		end
+		if not frame:IsVisible() then return end
+		if updatingSlider then return end
+		updatingSlider = true
+
+		local current = frame:GetCurrentScroll()
+		frame:ScrollToTop()
+		local maxScroll = frame:GetCurrentScroll()
+		frame:ScrollToBottom()
+		if current and current > 0 then
+			for k = 1, current do
+				frame:ScrollUp()
+			end
+		end
+
+		if maxScroll and maxScroll > 0 then
+			slider:SetMinMaxValues(0, maxScroll)
+			slider:SetValue(maxScroll - current)
+			local over = MouseIsOver(frame) or MouseIsOver(slider) or slider.isDragging
+			if over then
+				slider:Show()
+			end
+		else
+			slider:Hide()
+		end
+
+		updatingSlider = false
+	end
+
+	frame:HookScript("OnMessageScrollChanged", UpdateSlider)
+	frame:HookScript("OnShow", UpdateSlider)
+
+	slider:SetScript("OnValueChanged", function(self, value)
+		if updatingSlider then return end
+		updatingSlider = true
+
+		value = math.floor(value + 0.5)
+		local _, maxScroll = self:GetMinMaxValues()
+		local targetScroll = maxScroll - value
+
+		local current = frame:GetCurrentScroll()
+		local delta = targetScroll - current
+		if delta > 0 then
+			for k = 1, delta do
+				frame:ScrollUp()
+			end
+		elseif delta < 0 then
+			for k = 1, -delta do
+				frame:ScrollDown()
+			end
+		end
+
+		updatingSlider = false
+	end)
+
+	slider:HookScript("OnMouseDown", function()
+		slider.isDragging = true
+	end)
+	slider:HookScript("OnMouseUp", function()
+		slider.isDragging = false
+	end)
+
+	local timerFrame = CreateFrame("Frame", nil, frame)
+	timerFrame:SetScript("OnUpdate", function(self)
+		if not CH.db.scrollBar then
+			if slider:IsShown() then
+				slider:Hide()
+			end
+			return
+		end
+		local over = MouseIsOver(frame) or MouseIsOver(slider) or slider.isDragging
+		if over then
+			if not slider:IsShown() then
+				UpdateSlider()
+			end
+		else
+			if slider:IsShown() then
+				slider:Hide()
+			end
 		end
 	end)
 
@@ -544,6 +658,15 @@ function CH:OnLeave(frame)
 end
 
 function CH:SetupChatTabs(frame, hook)
+	if frame then
+		frame:SetFrameStrata("MEDIUM")
+		frame:SetFrameLevel(30)
+	end
+	if GeneralDockManager then
+		GeneralDockManager:SetFrameStrata("MEDIUM")
+		GeneralDockManager:SetFrameLevel(30)
+	end
+
 	if hook and (not self.hooks or not self.hooks[frame] or not self.hooks[frame].OnEnter) then
 		self:HookScript(frame, "OnEnter")
 		self:HookScript(frame, "OnLeave")
@@ -585,8 +708,9 @@ function CH:UpdateAnchors()
 		elseif self.db.editBoxPosition == "BELOW_CHAT" then
 			frame:SetAllPoints(LeftChatDataPanel)
 		else
-			frame:Point("BOTTOMLEFT", ChatFrame1, "TOPLEFT", -1, 3)
-			frame:Point("TOPRIGHT", ChatFrame1, "TOPRIGHT", 4, LeftChatTab:GetHeight() + 3)
+			local anchor = (LeftChatTab and LeftChatTab:IsShown()) and LeftChatTab or ChatFrame1
+			frame:Point("BOTTOMLEFT", anchor, "TOPLEFT", -1, 3)
+			frame:Point("TOPRIGHT", anchor, "TOPRIGHT", 4, 25)
 		end
 	end
 
@@ -753,6 +877,22 @@ function CH:UpdateChatTabColors()
 end
 E.valueColorUpdateFuncs[CH.UpdateChatTabColors] = true
 
+function CH:UpdateScrollBars()
+	for id, frameName in ipairs(CHAT_FRAMES) do
+		local frame = _G[frameName]
+		if frame then
+			local slider = _G[format("ChatFrame%dScrollbar", id)]
+			if slider then
+				if self.db.scrollBar then
+					slider:Show()
+				else
+					slider:Hide()
+				end
+			end
+		end
+	end
+end
+
 function CH:ScrollToBottom(frame)
 	frame:ScrollToBottom()
 
@@ -774,6 +914,14 @@ end
 
 function CH:FindURL(event, msg, author, ...)
 	if not CH.db.url then
+		msg = CH:CheckKeyword(msg, author)
+		msg = CH:GetSmileyReplacementText(msg)
+		return false, msg, author, ...
+	end
+
+	-- Fast path: nothing URL-shaped in the message -> skip the six gsub passes
+	-- below entirely (this is the hyperlinking cost the CoA devs disabled it for)
+	if not (find(msg, "://", 1, true) or find(msg, "www.", 1, true) or find(msg, "@", 1, true) or find(msg, "%d%.%d")) then
 		msg = CH:CheckKeyword(msg, author)
 		msg = CH:GetSmileyReplacementText(msg)
 		return false, msg, author, ...
@@ -927,12 +1075,20 @@ function CH:GetPluginIcon(sender, name, realm)
 	return icon
 end
 
+if _G.GetColoredName and not _G.GetColoredName_Protected then
+	_G.GetColoredName_Protected = true
+	local origBlizzGetColoredName = _G.GetColoredName
+	_G.GetColoredName = function(event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, ...)
+		return origBlizzGetColoredName(event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 or 0, ...)
+	end
+end
+
 function CH:GetColoredName(event, _, arg2, _, _, _, _, _, arg8, _, _, _, arg12)
 	local chatType = strsub(event, 10)
 	if strsub(chatType, 1, 7) == "WHISPER" then
 		chatType = "WHISPER"
 	elseif strsub(chatType, 1, 7) == "CHANNEL" then
-		chatType = "CHANNEL"..arg8
+		chatType = "CHANNEL"..(arg8 or 0)
 	end
 
 	local info = ChatTypeInfo[chatType]
@@ -986,12 +1142,12 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 			CH.ClassNames[strlower(nameWithRealm)] = englishClass
 		end
 
-		local channelLength = strlen(arg4)
+		local channelLength = strlen(arg4 or "")
 		local infoType = chatType
 		if (strsub(chatType, 1, 7) == "CHANNEL") and (chatType ~= "CHANNEL_LIST") and ((arg1 ~= "INVITE") or (chatType ~= "CHANNEL_NOTICE_USER")) then
 			if arg1 == "WRONG_PASSWORD" then
 				local staticPopup = _G[StaticPopup_Visible("CHAT_CHANNEL_PASSWORD") or ""]
-				if staticPopup and strupper(staticPopup.data) == strupper(arg9) then
+				if staticPopup and staticPopup.data and arg9 and strupper(staticPopup.data) == strupper(arg9) then
 					-- Don't display invalid password messages if we're going to prompt for a password (bug 102312)
 					return
 				end
@@ -999,11 +1155,13 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 
 			local found = 0
 			for index, value in pairs(frame.channelList) do
-				if channelLength > strlen(value) then
+				if value and (channelLength > 0 or (arg9 and arg9 ~= "")) then
 					-- arg9 is the channel name without the number in front...
-					if ((arg7 > 0) and (frame.zoneChannelList[index] == arg7)) or (strupper(value) == strupper(arg9)) then
+					if (arg7 and (arg7 > 0) and (frame.zoneChannelList[index] == arg7))
+					or (arg9 and value and (strupper(value) == strupper(arg9)))
+					or (arg4 and value and (strupper(value) == strupper(arg4))) then
 						found = 1
-						infoType = "CHANNEL"..arg8
+						infoType = "CHANNEL"..(arg8 or 0)
 						info = ChatTypeInfo[infoType]
 						if (chatType == "CHANNEL_NOTICE") and (arg1 == "YOU_LEFT") then
 							frame.channelList[index] = nil
@@ -1021,9 +1179,9 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 		local chatGroup = Chat_GetChatCategory(chatType)
 		local chatTarget
 		if chatGroup == "CHANNEL" or chatGroup == "BN_CONVERSATION" then
-			chatTarget = tostring(arg8)
+			chatTarget = tostring(arg8 or 0)
 		elseif chatGroup == "WHISPER" or chatGroup == "BN_WHISPER" then
-			chatTarget = strupper(arg2)
+			chatTarget = arg2 and strupper(arg2) or ""
 		end
 
 		if FCFManager_ShouldSuppressMessage(frame, chatGroup, chatTarget) then
@@ -1065,7 +1223,7 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 			frame:AddMessage(CHAT_RESTRICTED, info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
 		elseif chatType == "CHANNEL_LIST" then
 			if channelLength > 0 then
-				frame:AddMessage(format(_G["CHAT_"..chatType.."_GET"]..arg1, tonumber(arg8), arg4), info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
+				frame:AddMessage(format(_G["CHAT_"..chatType.."_GET"]..arg1, tonumber(arg8) or 0, arg4 or ""), info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
 			else
 				frame:AddMessage(arg1, info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
 			end
@@ -1075,13 +1233,13 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 				globalstring = _G["CHAT_"..arg1.."_NOTICE"]
 			end
 
-			if arg5 ~= "" then
+			if arg5 and arg5 ~= "" then
 				-- TWO users in this notice (E.G. x kicked y)
-				frame:AddMessage(format(globalstring, arg8, arg4, arg2, arg5), info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
+				frame:AddMessage(format(globalstring or "%s %s %s %s", arg8 or 0, arg4 or "", arg2 or "", arg5 or ""), info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
 			elseif arg1 == "INVITE" then
-				frame:AddMessage(format(globalstring, arg4, arg2), info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
+				frame:AddMessage(format(globalstring or "%s %s", arg4 or "", arg2 or ""), info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
 			else
-				frame:AddMessage(format(globalstring, arg8, arg4, arg2), info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
+				frame:AddMessage(format(globalstring or "%s %s %s", arg8 or 0, arg4 or "", arg2 or ""), info.r, info.g, info.b, info.id, false, nil, nil, isHistory, historyTime)
 			end
 		elseif chatType == "CHANNEL_NOTICE" then
 			if arg1 == "NOT_IN_LFG" or string.isNilOrEmpty(arg1) then return end
@@ -1089,17 +1247,17 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 			if not globalstring then
 				globalstring = _G["CHAT_"..arg1.."_NOTICE"]
 			end
-			if arg10 > 0 then
-				arg4 = arg4.." "..arg10
+			if arg10 and arg10 > 0 then
+				arg4 = (arg4 or "").." "..arg10
 			end
 
 			if not globalstring then
 				return
 			end
 
-			local accessID = ChatHistory_GetAccessID(Chat_GetChatCategory(chatType), arg8)
-			local typeID = ChatHistory_GetAccessID(infoType, arg8)
-			frame:AddMessage(format(globalstring, arg8, arg4), info.r, info.g, info.b, info.id, false, accessID, typeID, isHistory, historyTime)
+			local accessID = ChatHistory_GetAccessID(Chat_GetChatCategory(chatType), arg8 or 0)
+			local typeID = ChatHistory_GetAccessID(infoType, arg8 or 0)
+			frame:AddMessage(format(globalstring, arg8 or 0, arg4 or ""), info.r, info.g, info.b, info.id, false, accessID, typeID, isHistory, historyTime)
 		else
 			local body
 
@@ -1107,7 +1265,7 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 			-- Player Flags
 			local pflag, chatIcon, pluginChatIcon = "", specialChatIcons[nameWithRealm], CH:GetPluginIcon(nameWithRealm, name, realm)
 			if type(chatIcon) == "function" then chatIcon = chatIcon() end
-			if arg6 ~= "" then
+			if arg6 and arg6 ~= "" then
 				if arg6 == "GM" then
 					--If it was a whisper, dispatch it to the GMChat addon.
 					if chatType == "WHISPER" then
@@ -1121,7 +1279,7 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 				elseif arg6 == "DND" or arg6 == "AFK" then
 					pflag = (pflag or "").._G["CHAT_FLAG_"..arg6]
 				else
-					pflag = _G["CHAT_FLAG_"..arg6]
+					pflag = _G["CHAT_FLAG_"..arg6] or ""
 				end
 			else
 				-- Special Chat Icon
@@ -1161,25 +1319,25 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 			local playerLink
 
 			if chatType ~= "BN_WHISPER" and chatType ~= "BN_WHISPER_INFORM" and chatType ~= "BN_CONVERSATION" then
-				playerLink = "|Hplayer:"..arg2..":"..arg11..":"..chatGroup..(chatTarget and ":"..chatTarget or "").."|h"
+				playerLink = "|Hplayer:"..(arg2 or "")..":"..(arg11 or 0)..":"..(chatGroup or "")..(chatTarget and ":"..chatTarget or "").."|h"
 			else
-				playerLink = "|HBNplayer:"..arg2..":"..arg13..":"..arg11..":"..chatGroup..(chatTarget and ":"..chatTarget or "").."|h"
+				playerLink = "|HBNplayer:"..(arg2 or "")..":"..(arg13 or 0)..":"..(arg11 or 0)..":"..(chatGroup or "")..(chatTarget and ":"..chatTarget or "").."|h"
 			end
 
-			if arg3 ~= "" and arg3 ~= "Universal" and arg3 ~= frame.defaultLanguage then
+			if arg3 and arg3 ~= "" and arg3 ~= "Universal" and arg3 ~= frame.defaultLanguage then
 				local languageHeader = "["..arg3.."] "
-				if showLink and arg2 ~= "" then
+				if showLink and arg2 and arg2 ~= "" then
 					body = format(_G["CHAT_"..chatType.."_GET"]..languageHeader..arg1, pflag..playerLink.."["..coloredName.."]".."|h")
 				else
-					body = format(_G["CHAT_"..chatType.."_GET"]..languageHeader..arg1, pflag..arg2)
+					body = format(_G["CHAT_"..chatType.."_GET"]..languageHeader..arg1, pflag..(arg2 or ""))
 				end
 			else
-				if not showLink or strlen(arg2) == 0 then
-					body = format(_G["CHAT_"..chatType.."_GET"]..arg1, pflag..arg2, arg2)
+				if not showLink or not arg2 or strlen(arg2) == 0 then
+					body = format(_G["CHAT_"..chatType.."_GET"]..arg1, pflag..(arg2 or ""), arg2 or "")
 				else
 					if chatType == "EMOTE" then
 						body = format(_G["CHAT_"..chatType.."_GET"]..arg1, pflag..playerLink..coloredName.."|h")
-					elseif chatType == "TEXT_EMOTE" then
+					elseif chatType == "TEXT_EMOTE" and arg2 then
 						body = gsub(arg1, arg2, pflag..playerLink..coloredName.."|h", 1)
 					else
 						body = format(_G["CHAT_"..chatType.."_GET"]..arg1, pflag..playerLink.."["..coloredName.."]".."|h")
@@ -1188,11 +1346,11 @@ function CH:ChatFrame_MessageEventHandler(frame, event, arg1, arg2, arg3, arg4, 
 			end
 
 			-- Add Channel
-			arg4 = gsub(arg4, "%s%-%s.*", "")
+			arg4 = gsub(arg4 or "", "%s%-%s.*", "")
 			if chatGroup == "BN_CONVERSATION" then
-				body = format(CHAT_BN_CONVERSATION_GET_LINK, arg8, MAX_WOW_CHAT_CHANNELS + arg8)..body
-			elseif channelLength > 0 then
-				body = "|Hchannel:channel:"..arg8.."|h["..arg4.."]|h "..body
+				body = format(CHAT_BN_CONVERSATION_GET_LINK, arg8 or 0, MAX_WOW_CHAT_CHANNELS + (arg8 or 0))..body
+			elseif channelLength and channelLength > 0 then
+				body = "|Hchannel:channel:"..(arg8 or 0).."|h["..arg4.."]|h "..body
 			end
 
 			if CH.db.shortChannels and (chatType ~= "EMOTE" and chatType ~= "TEXT_EMOTE") then
@@ -1337,9 +1495,14 @@ function CH:ChatThrottleHandler(author, msg, when)
 	msg = PrepareMessage(author, msg)
 
 	if msg then
-		for message, msgTime in pairs(throttle) do
-			if (when - msgTime) >= self.db.throttleInterval then
-				throttle[message] = nil
+		-- Lazy prune: sweep at most once per throttle window instead of
+		-- scanning the whole table on every message
+		if (when - lastThrottlePrune) >= self.db.throttleInterval then
+			lastThrottlePrune = when
+			for message, msgTime in pairs(throttle) do
+				if (when - msgTime) >= self.db.throttleInterval then
+					throttle[message] = nil
+				end
 			end
 		end
 
@@ -1381,7 +1544,63 @@ function CH:ChatThrottleIntervalHandler(event, message, author, ...)
 	end
 end
 
+local multiChannelThrottle = {}
+local lastMultiPrune = 0
+
+local function NormalizeSpamMessage(msg)
+	if not msg then return "" end
+	-- Strip color codes, links, icon/texture tags, punctuation, and normalize spaces
+	local clean = gsub(msg, "|c%x%x%x%x%x%x%x%x", "")
+	clean = gsub(clean, "|r", "")
+	clean = gsub(clean, "|H.-|h(.-)|h", "%1")
+	clean = gsub(clean, "%b{}", "")
+	clean = gsub(clean, "%b<>", "")
+	clean = gsub(clean, "[%p%s]+", "")
+	return strlower(clean)
+end
+
+function CH:IsMultiChannelDuplicate(author, message, when, channel)
+	if CH.db.multiChannelDeduplicate == false then return false end
+	if not author or author == "" or author == E.myname then return false end
+	if not message or message == "" then return false end
+
+	local sender = strlower(strmatch(author, "([^%-]+)") or author)
+	local normMsg = NormalizeSpamMessage(message)
+	if normMsg == "" then return false end
+
+	local chanName = tostring(channel or "")
+	local key = sender .. ":" .. normMsg
+	local lastData = multiChannelThrottle[key]
+	local interval = 3 -- 3 second window for cross-channel spam
+
+	-- Only block if the EXACT same message was posted to a DIFFERENT channel within 3 seconds
+	if lastData and lastData.channel ~= chanName and (when - lastData.time) <= interval then
+		return true
+	end
+
+	multiChannelThrottle[key] = { time = when, channel = chanName }
+
+	-- Lazy prune: sweep entries older than interval
+	if (when - lastMultiPrune) > interval then
+		lastMultiPrune = when
+		for k, data in pairs(multiChannelThrottle) do
+			if type(data) == "table" and (when - data.time) > interval then
+				multiChannelThrottle[k] = nil
+			elseif type(data) ~= "table" then
+				multiChannelThrottle[k] = nil
+			end
+		end
+	end
+
+	return false
+end
+
 function CH:CHAT_MSG_CHANNEL(event, message, author, ...)
+	local when = time()
+	local channel = select(7, ...) -- channelNameWithoutNumber or full channel string
+	if CH:IsMultiChannelDuplicate(author, message, when, channel) then
+		return true
+	end
 	return CH:ChatThrottleIntervalHandler(event, message, author, ...)
 end
 
@@ -1399,6 +1618,27 @@ end
 
 local protectLinks = {}
 function CH:CheckKeyword(message, author)
+	-- Fast path: the word-by-word rebuild below generates a lot of string garbage.
+	-- When class-colored mentions are off, it can only ever do something if a
+	-- keyword appears in the message - check that with cheap plain substring
+	-- searches first and return the message untouched otherwise.
+	if not self.db.classColorMentionsChat then
+		if #CH.KeywordsLower == 0 then
+			return message
+		end
+		local lowerMessage = strlower(message)
+		local candidate
+		for i = 1, #CH.KeywordsLower do
+			if find(lowerMessage, CH.KeywordsLower[i], 1, true) then
+				candidate = true
+				break
+			end
+		end
+		if not candidate then
+			return message
+		end
+	end
+
 	local canPlaySound = author ~= E.myname and not self.SoundTimer and self.db.keywordSound ~= "None" and (not self.db.noAlertInCombat or not InCombatLockdown())
 
 	for hyperLink in gmatch(message, "|%x+|H.-|h.-|h|r") do
@@ -1551,13 +1791,18 @@ end
 
 function CH:UpdateChatKeywords()
 	wipe(CH.Keywords)
+	wipe(CH.KeywordsLower)
 
 	local keywords = self.db.keywords
 	keywords = gsub(keywords, ",%s", ",")
 
 	for stringValue in gmatch(keywords, "[^,]+") do
 		if stringValue ~= "" then
+			if stringValue == "%MYNAME%" then
+				stringValue = E.myname -- the options text documents this token; it was never substituted before
+			end
 			CH.Keywords[stringValue] = true
+			tinsert(CH.KeywordsLower, strlower(stringValue))
 		end
 	end
 end
@@ -1632,19 +1877,23 @@ end
 
 function CH:SaveChatHistory(event, ...)
 	if historyTypes[event] and not self.db.showHistory[historyTypes[event]] then return end
+	if not CH.db.chatHistory then return end
+
+	local arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 = ...
+
+	-- Filter out background addon / system channel events that have no channel number
+	if event == "CHAT_MSG_CHANNEL" and (not arg8 or arg8 == 0 or not arg4 or arg4 == "") then
+		return
+	end
 
 	if self.db.throttleInterval ~= 0 and (event == "CHAT_MSG_SAY" or event == "CHAT_MSG_YELL" or event == "CHAT_MSG_CHANNEL") then
-		local message, author = ...
 		local when = time()
-
-		if not self:ChatThrottleBlockFlag(author, message, when) then
-			self:ChatThrottleHandler(author, message, when)
+		if not self:ChatThrottleBlockFlag(arg2, arg1, when) then
+			self:ChatThrottleHandler(arg2, arg1, when)
 		else
 			return
 		end
 	end
-
-	if not CH.db.chatHistory then return end
 
 	if select("#", ...) > 0 then
 		local historyLog = ElvCharacterDB.ChatHistoryLog
@@ -1652,9 +1901,9 @@ function CH:SaveChatHistory(event, ...)
 		local historyEntry = {...}
 		historyEntry[50] = event
 		historyEntry[51] = time()
-		historyEntry[52] = self:GetColoredName(event, ...)
+		historyEntry[52] = (arg2 and arg2 ~= "") and arg2 or nil
 
-		while #historyLog >= self.db.historySize do
+		if #historyLog >= self.db.historySize then
 			tremove(historyLog, 1)
 		end
 

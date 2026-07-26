@@ -12,6 +12,11 @@ P.general = {
 	stickyFrames = true,
 	loginmessage = true,
 	interruptAnnounce = "NONE",
+	questAnnounce = {
+		enable = true,
+		every = 0,
+		debug = false
+	},
 	autoRoll = false,
 	autoAcceptInvite = false,
 	bottomPanel = true,
@@ -20,6 +25,14 @@ P.general = {
 	watchFrameHeight = 480,
 	watchFrameAutoHide = true,
 	vehicleSeatIndicatorSize = 128,
+	lootFrame = {
+		width = 256,
+		iconSize = 30,
+		font = "PT Sans Narrow",
+		fontSize = 12,
+		fontOutline = "OUTLINE",
+		transparency = 0.8,
+	},
 	afk = true,
 	numberPrefixStyle = "ENGLISH",
 	decimalLength = 1,
@@ -541,6 +554,8 @@ P.nameplates = {
 		healPrediction = {
 			personal = {r = 0, g = 1, b = 0.5, a = 0.25},
 			others = {r = 0, g = 1, b = 0, a = 0.25},
+			absorbPlayer = {r = 0.3, g = 0.7, b = 1.0, a = 0.6},
+			absorbOther = {r = 0.5, g = 0.5, b = 1.0, a = 0.6},
 		},
 		threat = {
 			goodColor = {r = 0.20, g = 0.71, b = 0.00},
@@ -825,11 +840,14 @@ P.auras = {
 --Chat
 P.chat = {
 	lockPositions = true,
-	url = false,
+	url = true,
 	shortChannels = true,
-	hyperlinkHover = false,
+	hyperlinkHover = true,
 	throttleInterval = 30,
+	multiChannelDeduplicate = false,
+	multiChannelInterval = 15,
 	scrollDownInterval = 15,
+	scrollBar = false,
 	fade = true,
 	inactivityTimer = 120,
 	font = "PT Sans Narrow",
@@ -840,7 +858,7 @@ P.chat = {
 	noAlertInCombat = false,
 	chatHistory = true,
 	maxLines = 128,
-	historySize = 50,
+	historySize = 100,
 	editboxHistorySize = 20,
 	channelAlerts = {
 		GUILD = "None",
@@ -873,6 +891,8 @@ P.chat = {
 	panelHeight = 180,
 	panelWidthRight = 412,
 	panelHeightRight = 180,
+	resizeLeft = true,
+	resizeRight = false,
 	panelBackdropNameLeft = "",
 	panelBackdropNameRight = "",
 	panelBackdrop = "SHOWBOTH",
@@ -1010,6 +1030,18 @@ P.unitframe = {
 	targetOnMouseDown = false,
 	auraBlacklistModifier = "SHIFT",
 	thinBorders = false,
+	roleSortOrderParty = "TANK,HEALER,DAMAGER,SUPPORT,NONE",
+	roleSortOrderRaid = "TANK,HEALER,DAMAGER,SUPPORT,NONE",
+	roleSortPlayerSeparatelyParty = false,
+	roleSortPlayerSeparatelyRaid = false,
+	-- Range Fader: custom spells (name or ID) used for the range check; empty = class defaults.
+	-- CoA classes have no built-in spell lists, so these let you match YOUR cast range.
+	rangeFriendlySpell = "",
+	rangeEnemySpell = "",
+	rangeResSpell = "",
+	rangePetSpell = "",
+	rangeFallback = "INTERACT28",
+	rangeFallbackEnemy = "INTERACT11",
 	cooldown = {
 		override = true,
 		reverse = false,
@@ -1109,6 +1141,14 @@ P.unitframe = {
 			personal = {r = 0, g = 1, b = 0.5, a = 0.25},
 			others = {r = 0, g = 1, b = 0, a = 0.25},
 			maxOverflow = 0
+		},
+		healAbsorbs = {
+			absorbPlayer = {r = 0.3, g = 0.7, b = 1.0, a = 0.6},
+			absorbOther = {r = 0.5, g = 0.5, b = 1.0, a = 0.6},
+			absorbPlayerOutline = "NONE",
+			absorbPlayerOutlineColor = {r = 1, g = 1, b = 1, a = 1},
+			absorbOtherOutline = "NONE",
+			absorbOtherOutlineColor = {r = 1, g = 1, b = 1, a = 1},
 		},
 		classResources = {
 			comboPoints = {
@@ -1641,6 +1681,11 @@ P.unitframe = {
 					lengthBeforeFade = 0.3,
 					forceBlankTexture = true
 				}
+			},
+			rareElite = {
+				enable = true,
+				skin = "classic",
+				frameStrata = "LOW",
 			}
 		},
 		targettarget = {
@@ -2964,6 +3009,7 @@ P.unitframe = {
 				tank = true,
 				healer = true,
 				damager = true,
+				support = true,
 				combatHide = false
 			},
 			raidRoleIcons = {
@@ -2982,6 +3028,14 @@ P.unitframe = {
 					text_format = "[namecolor][name:short]",
 					yOffset = 0,
 					xOffset = 0
+				},
+				raidicon = {
+					enable = true,
+					size = 18,
+					attachTo = "TOP",
+					attachToObject = "Frame",
+					xOffset = 0,
+					yOffset = 8
 				}
 			},
 			targetsGroup = {
@@ -3029,6 +3083,19 @@ P.unitframe = {
 				position = "BOTTOM",
 				xOffset = 0,
 				yOffset = 2
+			},
+			threat = {
+				enable = false,
+				position = "BOTTOMRIGHT",
+				size = 12,
+				xOffset = 0,
+				yOffset = 0,
+				attachTo = "Health",
+				texture = "ElvUI Blank",
+				font = "Homespun",
+				fontSize = 10,
+				fontOutline = "MONOCHROMEOUTLINE",
+				textColor = { r = 1, g = 1, b = 1, a = 1 }
 			},
 			resurrectIcon = {
 				enable = true,
@@ -3227,6 +3294,19 @@ P.unitframe = {
 				xOffset = 0,
 				yOffset = 2
 			},
+			threat = {
+				enable = false,
+				position = "BOTTOMRIGHT",
+				size = 12,
+				xOffset = 0,
+				yOffset = 0,
+				attachTo = "Health",
+				texture = "ElvUI Blank",
+				font = "Homespun",
+				fontSize = 10,
+				fontOutline = "MONOCHROMEOUTLINE",
+				textColor = { r = 1, g = 1, b = 1, a = 1 }
+			},
 			resurrectIcon = {
 				enable = true,
 				size = 30,
@@ -3423,6 +3503,19 @@ P.unitframe = {
 				position = "BOTTOM",
 				xOffset = 0,
 				yOffset = 2
+			},
+			threat = {
+				enable = false,
+				position = "BOTTOMRIGHT",
+				size = 12,
+				xOffset = 0,
+				yOffset = 0,
+				attachTo = "Health",
+				texture = "ElvUI Blank",
+				font = "Homespun",
+				fontSize = 10,
+				fontOutline = "MONOCHROMEOUTLINE",
+				textColor = { r = 1, g = 1, b = 1, a = 1 }
 			},
 			resurrectIcon = {
 				enable = true,

@@ -90,11 +90,18 @@ local function EraseEvents()
 	end
 end
 
+local MAX_DEATHS = 20
+
 local function AddDeath()
 	if #eventList > 0 then
 		local _, deathEvents = HasEvents()
 		local deathIndex = deathEvents + 1
 		deathList[deathIndex] = CopyTable(eventList)
+		-- keep memory bounded on long wipe nights: only the most recent deaths
+		-- can be opened from chat anyway
+		if deathIndex > MAX_DEATHS then
+			deathList[deathIndex - MAX_DEATHS] = nil
+		end
 		EraseEvents()
 
 		DEFAULT_CHAT_FRAME:AddMessage("|cff71d5ff|Hdeath:"..deathIndex.."|h["..L["You died."].."]|h|r")
@@ -331,6 +338,7 @@ function mod:PLAYER_DEAD()
 end
 
 function mod:COMBAT_LOG_EVENT_UNFILTERED(_, timestamp, event, _, sourceName, sourceFlags, destGUID, destName, destFlags, ...)
+	if not destFlags or not sourceFlags or not COMBATLOG_FILTER_ME then return end
 	if (band(destFlags, COMBATLOG_FILTER_ME) ~= COMBATLOG_FILTER_ME) or (band(sourceFlags, COMBATLOG_FILTER_ME) == COMBATLOG_FILTER_ME) then return end
 	if event ~= "ENVIRONMENTAL_DAMAGE"
 	and event ~= "RANGE_DAMAGE"

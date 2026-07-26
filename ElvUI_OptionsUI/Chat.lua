@@ -107,6 +107,17 @@ E.Options.args.chat = {
 						CH:RefreshToggleButtons()
 					end
 				},
+				scrollBar = {
+					order = 9.5,
+					type = "toggle",
+					name = L["Enable Scrollbar"],
+					desc = L["Display a vertical scrollbar on the chat frame."],
+					get = function(info) return E.db.chat.scrollBar end,
+					set = function(info, value)
+						E.db.chat.scrollBar = value
+						CH:UpdateScrollBars()
+					end
+				},
 				spacer = {
 					order = 10,
 					type = "description",
@@ -138,6 +149,12 @@ E.Options.args.chat = {
 						end
 					end
 				},
+				multiChannelDeduplicate = {
+					order = 12.1,
+					type = "toggle",
+					name = L["Prevent Multi-Channel Spam"],
+					desc = L["When a player posts the same message across multiple public channels (e.g. /1, /2, /4) at the same time, only display it once in the first channel."],
+				},
 				scrollDownInterval = {
 					order = 13,
 					type = "range",
@@ -151,6 +168,16 @@ E.Options.args.chat = {
 					name = L["Scroll Messages"],
 					desc = L["Number of messages you scroll for each step."],
 					min = 1, max = 10, step = 1,
+				},
+				scrollBar = {
+					order = 14.5,
+					type = "toggle",
+					name = L["Scrollbar"],
+					desc = L["Display a scrollbar on the chat frame when hovering or scrolling."],
+					set = function(info, value)
+						E.db.chat.scrollBar = value
+						CH:UpdateScrollBars()
+					end,
 				},
 				maxLines = {
 					order = 15,
@@ -630,6 +657,17 @@ E.Options.args.chat = {
 					set = function(info, value) E.db.chat.panelHeight = value CH:PositionChat(true) end,
 					min = 50, max = 600, step = 1
 				},
+				resizeLeft = {
+					order = 8.5,
+					type = "toggle",
+					name = L["Resizable Left Panel"],
+					desc = L["Allow dragging the top of the left chat panel to resize it."],
+					get = function(info) return E.db.chat.resizeLeft end,
+					set = function(info, value)
+						E.db.chat.resizeLeft = value
+						Layout:UpdateChatResizeHandles()
+					end,
+				},
 				panelWidth = {
 					order = 9,
 					type = "range",
@@ -675,6 +713,17 @@ E.Options.args.chat = {
 					hidden = function() return not E.db.chat.separateSizes end,
 					set = function(info, value) E.db.chat.panelHeightRight = value CH:PositionChat(true) end,
 					min = 50, max = 600, step = 1
+				},
+				resizeRight = {
+					order = 12.5,
+					type = "toggle",
+					name = L["Resizable Right Panel"],
+					desc = L["Allow dragging the top of the right chat panel to resize it."],
+					get = function(info) return E.db.chat.resizeRight end,
+					set = function(info, value)
+						E.db.chat.resizeRight = value
+						Layout:UpdateChatResizeHandles()
+					end,
 				},
 				panelWidthRight = {
 					order = 13,

@@ -173,7 +173,6 @@ S:AddCallback("Skin_Merchant", function()
 		local index = (MerchantFrame.page - 1) * MERCHANT_ITEMS_PER_PAGE
 		local _, button, name, quality
 
-		-- for i = 1, BUYBACK_ITEMS_PER_PAGE do
 		for i = 1, MERCHANT_ITEMS_PER_PAGE do
 			index = index + 1
 
@@ -181,8 +180,9 @@ S:AddCallback("Skin_Merchant", function()
 				button = _G["MerchantItem"..i.."ItemButton"]
 				name = _G["MerchantItem"..i.."Name"]
 
-				if button.link then
-					_, _, quality = GetItemInfo(button.link)
+				local itemLink = GetMerchantItemLink(index)
+				if itemLink then
+					_, _, quality = GetItemInfo(itemLink)
 
 					if quality then
 						local r, g, b = GetItemQualityColor(quality)
@@ -197,8 +197,11 @@ S:AddCallback("Skin_Merchant", function()
 					name:SetTextColor(1, 1, 1)
 				end
 			end
+		end
 
-			local itemName = GetBuybackItemInfo(GetNumBuybackItems())
+		local numBuyback = GetNumBuybackItems()
+		if numBuyback > 0 then
+			local itemName = GetBuybackItemInfo(numBuyback)
 			if itemName then
 				_, _, quality = GetItemInfo(itemName)
 
@@ -212,8 +215,13 @@ S:AddCallback("Skin_Merchant", function()
 				end
 			else
 				MerchantBuyBackItemItemButton:SetBackdropBorderColor(unpack(E.media.bordercolor))
+				MerchantBuyBackItemName:SetTextColor(1, 1, 1)
 			end
+		else
+			MerchantBuyBackItemItemButton:SetBackdropBorderColor(unpack(E.media.bordercolor))
+			MerchantBuyBackItemName:SetTextColor(1, 1, 1)
 		end
+
 		if not extLoaded then
 			MerchantItem3:SetPoint("TOPLEFT", "MerchantItem1", "BOTTOMLEFT", 0, -11)
 			MerchantItem5:SetPoint("TOPLEFT", "MerchantItem3", "BOTTOMLEFT", 0, -11)

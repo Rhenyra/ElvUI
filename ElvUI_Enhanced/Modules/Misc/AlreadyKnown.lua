@@ -32,9 +32,9 @@ local knownColor = {r = 0.1, g = 1.0, b = 0.2}
 local function MerchantFrame_UpdateMerchantInfo()
 	local numItems = GetMerchantNumItems()
 
-	for i = 1, BUYBACK_ITEMS_PER_PAGE do
+	for i = 1, MERCHANT_ITEMS_PER_PAGE do
 		local index = (MerchantFrame.page - 1) * MERCHANT_ITEMS_PER_PAGE + i
-		if index > numItems then return end
+		if index > numItems then break end
 
 		local button = _G["MerchantItem"..i.."ItemButton"]
 
@@ -49,6 +49,8 @@ local function MerchantFrame_UpdateMerchantInfo()
 				end
 
 				SetItemButtonTextureVertexColor(button, r, g, b)
+			else
+				SetItemButtonTextureVertexColor(button, 1, 1, 1)
 			end
 		end
 	end
@@ -163,10 +165,15 @@ function AK:IsAlreadyKnown(itemLink)
 	if not itemLink then return end
 
 	local itemID = match(itemLink, "item:(%d+):")
-	if self.knownTable[itemID] then return true end
+	if not itemID then return end
+	if self.knownTable[itemID] ~= nil then return self.knownTable[itemID] end
 
 	local _, _, _, _, _, itemType = GetItemInfo(itemLink)
-	if not self.knowableTypes[itemType] then return end
+	if not itemType then return false end
+	if not self.knowableTypes[itemType] then
+		self.knownTable[itemID] = false
+		return false
+	end
 
 	self.scantip:ClearLines()
 	self.scantip:SetHyperlink(itemLink)
@@ -179,6 +186,9 @@ function AK:IsAlreadyKnown(itemLink)
 			return true
 		end
 	end
+
+	self.knownTable[itemID] = false
+	return false
 end
 
 function AK:ADDON_LOADED(_, addon)

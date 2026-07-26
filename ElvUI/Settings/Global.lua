@@ -40,6 +40,15 @@ G.nameplates = {}
 G.unitframe = {
 	aurafilters = {},
 	buffwatch = {},
+	-- Absorb engine: tooltip discovery of unknown shields, per group size.
+	-- Discovery is OFF in raids by default because tooltip scanning is expensive at raid scale.
+	absorbDiscoverySolo = true,
+	absorbDiscoveryParty = true,
+	absorbDiscoveryRaid = false,
+	-- Trust UnitGetTotalAbsorbs() == 0 to mean "no shields" and skip all buff
+	-- scanning (big raid perf win). Verified working on CoA via /eabsorb;
+	-- turn OFF if a realm's API misses shields that are visibly active.
+	absorbTrustNative = true,
 	raidDebuffIndicator = {
 		instanceFilter = "RaidDebuffs",
 		otherFilter = "CCDebuffs",

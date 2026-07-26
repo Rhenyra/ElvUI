@@ -748,9 +748,13 @@ local AuraUpdateEvents = {
 }
 
 function NP:COMBAT_LOG_EVENT_UNFILTERED(_, _, event, _, sourceGUID, sourceName, targetGUID)
-	NP:CASTBAR_COMBAT_LOG_EVENT_UNFILTERED(event, sourceGUID, sourceName, targetGUID)
-	local auraUpdate = AuraUpdateEvents[event]
-	if not auraUpdate then return end
+	-- Aura and interrupt events are mutually exclusive: gate with the cheap
+	-- hash lookup first so the castbar-interrupt sub-handler is skipped for
+	-- every aura event at raid combat-log volume
+	if not AuraUpdateEvents[event] then
+		NP:CASTBAR_COMBAT_LOG_EVENT_UNFILTERED(event, sourceGUID, sourceName, targetGUID)
+		return
+	end
 	if targetGUID and targetGUID ~= "" then
 		local nameplate = NP.PlateGUID[targetGUID]
 		if not nameplate then return end

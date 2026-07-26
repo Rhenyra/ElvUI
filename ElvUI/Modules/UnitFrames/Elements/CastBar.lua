@@ -127,6 +127,10 @@ function UF:Configure_Castbar(frame)
 
 		castbar.timeToHold = db.castbar.timeToHold
 
+		local textColor = db.castbar.textColor or {r = 0.84, g = 0.75, b = 0.65}
+		castbar.Time:SetTextColor(textColor.r, textColor.g, textColor.b)
+		castbar.Text:SetTextColor(textColor.r, textColor.g, textColor.b)
+
 		--Latency
 		if db.castbar.latency then
 			castbar.SafeZone = castbar.LatencyTexture

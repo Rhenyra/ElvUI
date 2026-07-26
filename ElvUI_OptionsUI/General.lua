@@ -52,6 +52,12 @@ E.Options.args.general = {
 					desc = L["This selects the Chat Frame to use as the output of ElvUI messages."],
 					values = GetChatWindowInfo()
 				},
+				loginmessage = {
+					order = 2.5,
+					type = "toggle",
+					name = L["Login Message"],
+					desc = L["Enable/Disable the login messages from ElvUI."]
+				},
 				AutoScale = {
 					order = 3,
 					type = "execute",
@@ -608,6 +614,58 @@ E.Options.args.general = {
 						E:StaticPopup_Show("PRIVATE_RL")
 					end
 				},
+				lootFrameGroup = {
+					order = 2.5,
+					type = "group",
+					name = L["Loot Frame Options"],
+					guiInline = true,
+					disabled = function() return not E.private.general.loot end,
+					get = function(info) return E.db.general.lootFrame[info[#info]] end,
+					set = function(info, value)
+						E.db.general.lootFrame[info[#info]] = value
+						Misc:UpdateLootFrame()
+					end,
+					args = {
+						width = {
+							order = 1,
+							type = "range",
+							name = L["Width"],
+							min = 150, max = 500, step = 1,
+						},
+						iconSize = {
+							order = 2,
+							type = "range",
+							name = L["Icon Size"],
+							min = 16, max = 60, step = 1,
+						},
+						font = {
+							order = 3,
+							type = "select",
+							dialogControl = "LSM30_Font",
+							name = L["Font"],
+							values = AceGUIWidgetLSMlists.font,
+						},
+						fontSize = {
+							order = 4,
+							type = "range",
+							name = L["Font Size"],
+							min = 6, max = 32, step = 1,
+						},
+						fontOutline = {
+							order = 5,
+							type = "select",
+							name = L["Font Outline"],
+							values = C.Values.FontFlags,
+						},
+						transparency = {
+							order = 6,
+							type = "range",
+							name = L["Transparency"],
+							min = 0, max = 1, step = 0.05,
+							isPercent = true,
+						},
+					},
+				},
 				lootRoll = {
 					order = 3,
 					type = "toggle",
@@ -700,6 +758,33 @@ E.Options.args.general = {
 					name = L["Auto Greed/DE"],
 					desc = L["Automatically select greed or disenchant (when available) on green quality items. This will only work if you are the max level."],
 					disabled = function() return not E.private.general.lootRoll end
+				},
+				questAnnounce = {
+					order = 10,
+					type = "group",
+					name = "Quest Announce",
+					guiInline = true,
+					get = function(info) return E.db.general.questAnnounce[info[#info]] end,
+					set = function(info, value)
+						E.db.general.questAnnounce[info[#info]] = value
+						Misc:ToggleQuestAnnounce()
+					end,
+					args = {
+						enable = {
+							order = 1,
+							type = "toggle",
+							name = L["Enable"],
+							desc = "Enables/Disables Quest Announce to Party chat.",
+						},
+						every = {
+							order = 2,
+							type = "range",
+							name = "Announce Every",
+							desc = "Announce progression every x number of steps (0 will announce on quest objective completion only).",
+							min = 0, max = 10, step = 1,
+							disabled = function() return not E.db.general.questAnnounce.enable end,
+						},
+					},
 				}
 			}
 		}

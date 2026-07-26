@@ -117,7 +117,14 @@ end
 -- Script to fire blizzard events into the event listeners
 local events = AceEvent.events
 AceEvent.frame:SetScript("OnEvent", function(this, event, ...)
+	local _start = debugprofilestop()
 	events:Fire(event, ...)
+	local _elapsed = debugprofilestop() - _start
+	if _elapsed > 5 then
+		if _G.ElvUI_LogDiagnostic then
+			_G.ElvUI_LogDiagnostic(string.format("[Profile] AceEvent:Fire(%s) total: %.2f ms", tostring(event), _elapsed))
+		end
+	end
 end)
 
 --- Finally: upgrade our old embeds

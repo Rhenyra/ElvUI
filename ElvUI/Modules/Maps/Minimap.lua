@@ -163,10 +163,15 @@ function M:Minimap_OnMouseWheel(d)
 end
 
 function M:Update_ZoneText()
+	local start = debugprofilestop()
 	if E.db.general.minimap.locationText == "HIDE" or not E.private.general.minimap.enable then return end
 	Minimap.location:SetText(utf8sub(GetMinimapZoneText(),1,46))
 	Minimap.location:SetTextColor(self:GetLocTextColor())
 	Minimap.location:FontTemplate(E.Libs.LSM:Fetch("font", E.db.general.minimap.locationFont), E.db.general.minimap.locationFontSize, E.db.general.minimap.locationFontOutline)
+	local elapsed = debugprofilestop() - start
+	if elapsed > 1 and _G.ElvUI_LogDiagnostic then
+		_G.ElvUI_LogDiagnostic(string.format("[Profile] Minimap Update_ZoneText took: %.2f ms", elapsed))
+	end
 end
 
 function M:PLAYER_REGEN_ENABLED()
@@ -426,6 +431,18 @@ local function MinimapPostDrag()
 	MinimapBackdrop:SetAllPoints(Minimap)
 end
 
+function M:UpdateMailIcon()
+	if not MiniMapMailFrame then return end
+	if not HasNewMail() then
+		MiniMapMailFrame:Hide()
+	elseif MailFrame and MailFrame:IsShown() then
+		local numItems = GetInboxNumItems()
+		if numItems and numItems == 0 then
+			MiniMapMailFrame:Hide()
+		end
+	end
+end
+
 function M:Initialize()
 	menuFrame:SetTemplate("Transparent", true)
 
@@ -511,6 +528,10 @@ function M:Initialize()
 	self:RegisterEvent("ZONE_CHANGED_INDOORS", "Update_ZoneText")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "Update_ZoneText")
 
+	self:RegisterEvent("UPDATE_PENDING_MAIL", "UpdateMailIcon")
+	self:RegisterEvent("MAIL_INBOX_UPDATE", "UpdateMailIcon")
+	self:RegisterEvent("MAIL_CLOSED", "UpdateMailIcon")
+
 	hooksecurefunc(Minimap, "SetZoom", SetupZoomReset)
 
 	self:CreateFarmModeMap()
@@ -523,3 +544,4 @@ local function InitializeCallback()
 end
 
 E:RegisterInitialModule(M:GetName(), InitializeCallback)
+

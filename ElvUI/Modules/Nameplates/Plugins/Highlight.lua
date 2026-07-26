@@ -12,18 +12,32 @@ local function MouseOnUnit(frame)
 	return false
 end
 
-local function OnUpdate(self, elapsed)
-	if self.elapsed and self.elapsed > 0.1 then
-		if not MouseOnUnit(self) then
-			self:Hide()
-			self:ForceUpdate()
-		end
+local activeHighlights = {}
+local pooler = CreateFrame("Frame")
+pooler:Hide()
 
-		self.elapsed = 0
-	else
-		self.elapsed = (self.elapsed or 0) + elapsed
+pooler:SetScript("OnUpdate", function(self, elapsed)
+	self.elapsed = (self.elapsed or 0) + elapsed
+	if self.elapsed < 0.1 then return end
+	self.elapsed = 0
+
+	for element in pairs(activeHighlights) do
+		local owner = element.__owner
+		if owner and owner:IsVisible() then
+			if not MouseOnUnit(owner) then
+				element:Hide()
+				element:ForceUpdate()
+				activeHighlights[element] = nil
+			end
+		else
+			activeHighlights[element] = nil
+		end
 	end
-end
+
+	if not next(activeHighlights) then
+		self:Hide()
+	end
+end)
 
 local function Update(self)
 	local element = self.Highlight
@@ -34,8 +48,11 @@ local function Update(self)
 
 	if MouseOnUnit(self) then
 		element:Show()
+		activeHighlights[element] = true
+		pooler:Show()
 	else
 		element:Hide()
+		activeHighlights[element] = nil
 	end
 
 	if element.PostUpdate then
@@ -56,7 +73,6 @@ local function Enable(self)
 	if element then
 		element.__owner = self
 		element.ForceUpdate = ForceUpdate
-		element:SetScript('OnUpdate', OnUpdate)
 
 		self:RegisterEvent('UPDATE_MOUSEOVER_UNIT', Path, true)
 
@@ -68,7 +84,7 @@ local function Disable(self)
 	local element = self.Highlight
 	if element then
 		element:Hide()
-		element:SetScript('OnUpdate', nil)
+		activeHighlights[element] = nil
 
 		self:UnregisterEvent('UPDATE_MOUSEOVER_UNIT', Path)
 	end

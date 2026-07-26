@@ -42,18 +42,27 @@ local function getQuestXP(completedOnly, zoneOnly)
 	return totalExp
 end
 
+local questXPUpdateTimer = nil
 function mod:ExperienceBar_QuestXPUpdate(event)
 	if event == "ZONE_CHANGED_NEW_AREA" and not self.db.experience.questXP.questCurrentZoneOnly then return end
 
-	self.questTotalXP = getQuestXP(self.db.experience.questXP.questCompletedOnly, self.db.experience.questXP.questCurrentZoneOnly)
-
-	if self.questTotalXP > 0 and self.expBar.maxExp and self.expBar.curExp then
-		self.expBar.questBar:SetMinMaxValues(0, self.expBar.maxExp)
-		self.expBar.questBar:SetValue(min(self.expBar.curExp + self.questTotalXP, self.expBar.maxExp))
-		self.expBar.questBar:Show()
-	else
-		self.expBar.questBar:Hide()
+	if questXPUpdateTimer then
+		questXPUpdateTimer:Cancel()
 	end
+
+	questXPUpdateTimer = C_Timer.NewTimer(1.5, function()
+		questXPUpdateTimer = nil
+
+		self.questTotalXP = getQuestXP(self.db.experience.questXP.questCompletedOnly, self.db.experience.questXP.questCurrentZoneOnly)
+
+		if self.questTotalXP > 0 and self.expBar.maxExp and self.expBar.curExp then
+			self.expBar.questBar:SetMinMaxValues(0, self.expBar.maxExp)
+			self.expBar.questBar:SetValue(min(self.expBar.curExp + self.questTotalXP, self.expBar.maxExp))
+			self.expBar.questBar:Show()
+		else
+			self.expBar.questBar:Hide()
+		end
+	end)
 end
 
 function mod:ExperienceBar_Update(event)

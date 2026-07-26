@@ -10,6 +10,7 @@ local CreateFrame = CreateFrame
 local GetSpellInfo = GetSpellInfo
 local GetTime = GetTime
 local UnitAura = UnitAura
+local wipe = table.wipe
 
 RB.Spell1Buffs = {
 	67016, -- Flask of the North (SP)
@@ -294,13 +295,50 @@ RB.Spell14Buffs = {
 	34455, -- Ferocious Inspiration
 }
 
-function RB:CheckFilterForActiveBuff(filter)
+-- Cached spell names per filter list (spell names never change at runtime).
+local filterNames = setmetatable({}, {__index = function(t, filter)
+	local names = {}
 	for _, spell in ipairs(filter) do
 		local spellName = GetSpellInfo(spell)
-		local name, _, texture, _, _, duration, expirationTime = UnitAura("player", spellName)
+		if spellName then
+			names[#names + 1] = spellName
+		end
+	end
+	t[filter] = names
+	return names
+end})
 
-		if name then
-			return texture, duration, expirationTime
+-- One index-based pass over the player's auras per update. The old code called
+-- UnitAura("player", name) for every single spellID in every filter list (a
+-- linear scan each) on every UNIT_AURA event - dozens to hundreds of scans per
+-- event during raid combat.
+local activeTexture, activeDuration, activeExpiration = {}, {}, {}
+
+function RB:ScanPlayerAuras()
+	wipe(activeTexture)
+	wipe(activeDuration)
+	wipe(activeExpiration)
+
+	local i = 1
+	while true do
+		local name, _, texture, _, _, duration, expirationTime = UnitAura("player", i)
+		if not name then break end
+		if activeTexture[name] == nil then -- keep the first occurrence, matching UnitAura-by-name behavior
+			activeTexture[name] = texture
+			activeDuration[name] = duration
+			activeExpiration[name] = expirationTime
+		end
+		i = i + 1
+	end
+end
+
+function RB:CheckFilterForActiveBuff(filter)
+	local names = filterNames[filter]
+	for i = 1, #names do
+		local name = names[i]
+		local texture = activeTexture[name]
+		if texture then
+			return texture, activeDuration[name], activeExpiration[name]
 		end
 	end
 end
@@ -330,6 +368,7 @@ end
 
 function RB:UpdateReminder(event, unit)
 	if event == "UNIT_AURA" and unit ~= "player" then return end
+	self:ScanPlayerAuras()
 	local wide = E.db.general.reminder.wide
 	for i = 1, wide and 14 or 7 do
 		local texture, duration, expirationTime = self:CheckFilterForActiveBuff(self["Spell"..i.."Buffs"])

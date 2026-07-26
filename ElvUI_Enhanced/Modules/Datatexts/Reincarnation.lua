@@ -24,15 +24,26 @@ local displayString = ""
 
 local lastPanel
 
-local function OnUpdate(self)
+local function OnUpdate(self, elapsed)
+	-- throttle: a cooldown text does not need per-frame updates
+	self.elapsed = (self.elapsed or 1) + elapsed
+	if self.elapsed < 0.5 then return end
+	self.elapsed = 0
+
 	local isKnown = IsSpellKnown(20608, false)
-	if not isKnown then return end
+	if not isKnown then
+		self:SetScript("OnUpdate", nil)
+		return
+	end
 
 	local start, duration = GetSpellCooldown(20608)
 	if start > 0 and duration > 0 then
 		self.text:SetFormattedText(displayString, format(iconString, tex), format("%d:%02d", floor((duration - (GetTime() - start)) / 60), floor((duration - (GetTime() - start)) % 60)))
 	else
 		self.text:SetFormattedText(displayString, format(iconString, tex), READY.."!")
+		-- cooldown finished: stop running every frame (previously this script
+		-- kept running for the rest of the session)
+		self:SetScript("OnUpdate", nil)
 	end
 end
 

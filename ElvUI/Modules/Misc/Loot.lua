@@ -34,7 +34,17 @@ local LOOT = LOOT
 
 -- Credit Haste
 local lootFrame, lootFrameHolder
-local iconSize = 30
+
+local function GetLootSettings()
+	local db = E.db.general.lootFrame
+	local iconSize = (db and db.iconSize) or 30
+	local font = (db and db.font) and E.LSM:Fetch("font", db.font) or E.media.normFont
+	local fontSize = (db and db.fontSize) or 12
+	local fontOutline = (db and db.fontOutline) or "OUTLINE"
+	local width = (db and db.width) or 256
+	local transparency = (db and db.transparency) or 0.8
+	return iconSize, font, fontSize, fontOutline, width, transparency
+end
 
 local sq, ss, sn
 local OnEnter = function(self)
@@ -87,6 +97,7 @@ local OnShow = function(self)
 end
 
 local function anchorSlots(self)
+	local iconSize = GetLootSettings()
 	local shownSlots = 0
 	for i = 1, #self.slots do
 		local frame = self.slots[i]
@@ -101,6 +112,7 @@ local function anchorSlots(self)
 end
 
 local function createSlot(id)
+	local iconSize, font, fontSize, fontOutline = GetLootSettings()
 	local frame = CreateFrame("Button", "ElvLootSlot"..id, lootFrame)
 	frame:Point("LEFT", 8, 0)
 	frame:Point("RIGHT", -8, 0)
@@ -129,7 +141,7 @@ local function createSlot(id)
 	local count = iconFrame:CreateFontString(nil, "OVERLAY")
 	count:SetJustifyH("RIGHT")
 	count:Point("BOTTOMRIGHT", iconFrame, -2, 2)
-	count:FontTemplate(nil, nil, "OUTLINE")
+	count:FontTemplate(font, fontSize, fontOutline)
 	count:SetText(1)
 	frame.count = count
 
@@ -138,7 +150,7 @@ local function createSlot(id)
 	name:Point("LEFT", frame)
 	name:Point("RIGHT", icon, "LEFT")
 	name:SetNonSpaceWrap(true)
-	name:FontTemplate(nil, nil, "OUTLINE")
+	name:FontTemplate(font, fontSize, fontOutline)
 	frame.name = name
 
 	local drop = frame:CreateTexture(nil, "ARTWORK")
@@ -292,9 +304,29 @@ function M:LOOT_OPENED(_, autoLoot)
 	w = w + 60
 	t = t + 5
 
+	local iconSize, font, fontSize, fontOutline, minWidth, transparency = GetLootSettings()
+	lootFrame.title:FontTemplate(font, fontSize + 2, fontOutline)
 	local color = ITEM_QUALITY_COLORS[m]
-	lootFrame:SetBackdropBorderColor(color.r, color.g, color.b, .8)
-	lootFrame:Width(max(w, t))
+	lootFrame:SetBackdropBorderColor(color.r, color.g, color.b, transparency)
+	lootFrame:SetBackdropColor(0, 0, 0, transparency)
+	lootFrame:Width(max(w, t, minWidth))
+end
+
+function M:UpdateLootFrame()
+	if not lootFrame then return end
+	local iconSize, font, fontSize, fontOutline, minWidth, transparency = GetLootSettings()
+
+	lootFrame.title:FontTemplate(font, fontSize + 2, fontOutline)
+	for i = 1, #lootFrame.slots do
+		local slot = lootFrame.slots[i]
+		if slot then
+			slot:Height(iconSize - 2)
+			slot.iconFrame:Size(iconSize - 2)
+			slot.count:FontTemplate(font, fontSize, fontOutline)
+			slot.name:FontTemplate(font, fontSize, fontOutline)
+		end
+	end
+	anchorSlots(lootFrame)
 end
 
 function M:LoadLoot()
@@ -311,8 +343,9 @@ function M:LoadLoot()
 	lootFrame:SetTemplate("Transparent")
 	lootFrame:SetFrameStrata("DIALOG")
 	lootFrame:SetToplevel(true)
+	local iconSize, font, fontSize, fontOutline = GetLootSettings()
 	lootFrame.title = lootFrame:CreateFontString(nil, "OVERLAY")
-	lootFrame.title:FontTemplate(nil, nil, "OUTLINE")
+	lootFrame.title:FontTemplate(font, fontSize + 2, fontOutline)
 	lootFrame.title:Point("BOTTOMLEFT", lootFrame, "TOPLEFT", 0, 1)
 	lootFrame.slots = {}
 	lootFrame:SetScript("OnHide", function()

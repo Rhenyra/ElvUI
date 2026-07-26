@@ -140,6 +140,19 @@ local achievementTiers = {
 }
 
 local progressCache = {}
+local progressCacheCount = 0
+local MAX_PROGRESS_ENTRIES = 200
+
+-- Bounded + wiped on world entry: previously grew one entry per inspected
+-- player for the whole session
+local progressWipeFrame = CreateFrame("Frame")
+progressWipeFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+progressWipeFrame:SetScript("OnEvent", function()
+	if progressCacheCount > 0 then
+		wipe(progressCache)
+		progressCacheCount = 0
+	end
+end)
 
 --[[
 local GetAchievementCriteriaInfo = GetAchievementCriteriaInfo
@@ -220,6 +233,11 @@ end
 
 local function UpdateProgression(guid)
 	if not progressCache[guid] then
+		progressCacheCount = progressCacheCount + 1
+		if progressCacheCount > MAX_PROGRESS_ENTRIES then
+			wipe(progressCache)
+			progressCacheCount = 1
+		end
 		progressCache[guid] = {
 			header = {},
 			info = {},

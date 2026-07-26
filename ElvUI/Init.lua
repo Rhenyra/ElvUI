@@ -131,6 +131,7 @@ function AddOn:OnInitialize()
 		ElvCharacterDB = {}
 	end
 
+
 	self.db = tcopy(self.DF.profile, true)
 	self.global = tcopy(self.DF.global, true)
 

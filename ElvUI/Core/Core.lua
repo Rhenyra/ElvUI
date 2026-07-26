@@ -308,11 +308,13 @@ function E:UpdateFrameTemplates()
 end
 
 function E:UpdateBorderColors()
+	local bc1, bc2, bc3, bc4 = unpack(self.media.bordercolor)
+	local uc1, uc2, uc3, uc4 = unpack(self.media.unitframeBorderColor)
 	for frame in pairs(self.frames) do
 		if frame and not frame.ignoreUpdates then
 			if not frame.ignoreBorderColors then
 				if frame.template == "Default" or frame.template == "Transparent" or frame.template == nil then
-					frame:SetBackdropBorderColor(unpack(self.media.bordercolor))
+					frame:SetBackdropBorderColor(bc1, bc2, bc3, bc4)
 				end
 			end
 		else
@@ -324,7 +326,7 @@ function E:UpdateBorderColors()
 		if frame and not frame.ignoreUpdates then
 			if not frame.ignoreBorderColors then
 				if frame.template == "Default" or frame.template == "Transparent" or frame.template == nil then
-					frame:SetBackdropBorderColor(unpack(self.media.unitframeBorderColor))
+					frame:SetBackdropBorderColor(uc1, uc2, uc3, uc4)
 				end
 			end
 		else
@@ -334,13 +336,15 @@ function E:UpdateBorderColors()
 end
 
 function E:UpdateBackdropColors()
+	local bd1, bd2, bd3, bd4 = unpack(self.media.backdropcolor)
+	local bf1, bf2, bf3, bf4 = unpack(self.media.backdropfadecolor)
 	for frame in pairs(self.frames) do
 		if frame and not frame.ignoreUpdates then
 			if not frame.ignoreBackdropColors then
 				if frame.template == "Default" or frame.template == nil then
-					frame:SetBackdropColor(unpack(self.media.backdropcolor))
+					frame:SetBackdropColor(bd1, bd2, bd3, bd4)
 				elseif frame.template == "Transparent" then
-					frame:SetBackdropColor(unpack(self.media.backdropfadecolor))
+					frame:SetBackdropColor(bf1, bf2, bf3, bf4)
 				end
 			end
 		else
@@ -352,9 +356,9 @@ function E:UpdateBackdropColors()
 		if frame and not frame.ignoreUpdates then
 			if not frame.ignoreBackdropColors then
 				if frame.template == "Default" or frame.template == nil then
-					frame:SetBackdropColor(unpack(self.media.backdropcolor))
+					frame:SetBackdropColor(bd1, bd2, bd3, bd4)
 				elseif frame.template == "Transparent" then
-					frame:SetBackdropColor(unpack(self.media.backdropfadecolor))
+					frame:SetBackdropColor(bf1, bf2, bf3, bf4)
 				end
 			end
 		else
@@ -1231,4 +1235,176 @@ function E:Initialize()
 	if GetCVar("scriptProfile") ~= "1" then
 		collectgarbage("collect")
 	end
+end
+
+-- Conquest of Azeroth Support role detection and hook
+local supportSpecs = {}
+local coaClasses = {
+	"NECROMANCER", "PYROMANCER", "CULTIST", "STARCALLER", "SUNCLERIC", "TINKER", "RUNEMASTER", "PRIMALIST", "REAPER", "VENOMANCER", "CHRONOMANCER", "BLOODMAGE", "GUARDIAN", "STORMBRINGER", "FELSWORN", "BARBARIAN", "WITCHDOCTOR", "WITCHHUNTER", "KNIGHTOFXOROTH", "TEMPLAR", "RANGER", "HERO"
+}
+
+local supportSpecNames = {
+	["Inspiration"] = true,
+	["Fleshweaver"] = true,
+	["Grovekeeper"] = true,
+	["Ancestry"] = true,
+	["Farstrider"] = true,
+	["Wind"] = true,
+}
+E.SupportSpecNames = supportSpecNames -- shared with the group spec inspector (SpecCache)
+
+local function IsSpecSupport(specId)
+	if not specId or specId <= 0 then return false end
+	if supportSpecs[specId] then return true end
+	
+	if GetSpecializationInfoByID then
+		local _, name = GetSpecializationInfoByID(specId)
+		if name and supportSpecNames[name] then
+			supportSpecs[specId] = true
+			return true
+		end
+	end
+	
+	if C_ClassInfo and C_ClassInfo.GetSpecInfoByID then
+		local specInfo = C_ClassInfo.GetSpecInfoByID(specId)
+		if specInfo then
+			local name = specInfo.Name
+			if specInfo.Support or (name and supportSpecNames[name]) then
+				supportSpecs[specId] = true
+				return true
+			end
+		end
+	end
+	
+	return false
+end
+
+if C_ClassInfo and C_ClassInfo.GetAllSpecs and C_ClassInfo.GetSpecInfo then
+	for _, class in ipairs(coaClasses) do
+		local specs = C_ClassInfo.GetAllSpecs(class)
+		if specs then
+			for _, spec in ipairs(specs) do
+				local specInfo = C_ClassInfo.GetSpecInfo(class, spec)
+				if specInfo then
+					local name = specInfo.Name
+					if specInfo.Support or (name and supportSpecNames[name]) then
+						supportSpecs[specInfo.ID] = true
+					end
+				end
+			end
+		end
+	end
+end
+
+local orig_UnitGroupRolesAssigned = UnitGroupRolesAssigned
+
+local function GetUnitRealRole(unit)
+	local guid = UnitGUID(unit)
+	local specId
+	if UnitIsUnit(unit, "player") then
+		local specIndex = GetSpecialization and GetSpecialization()
+		if specIndex then
+			specId = GetSpecializationInfo(specIndex)
+		end
+	else
+		-- Group spec inspector result (Modules/Misc/SpecCache.lua): resolved
+		-- via CoA inspect APIs in the background, no hovering required
+		if guid and E.SupportSpecCache then
+			local cached = E.SupportSpecCache[guid]
+			if cached == true then
+				return "SUPPORT"
+			elseif cached == false then
+				specId = nil -- known non-support; skip the spec sniffing below
+			end
+		end
+		if (not E.SupportSpecCache or E.SupportSpecCache[guid] == nil) then
+			if _G.Details and _G.Details.cached_specs and guid then
+				specId = _G.Details.cached_specs[guid]
+			end
+			if (not specId or specId == 0) and _G.GetInspectSpecialization then
+				specId = _G.GetInspectSpecialization(unit)
+			end
+		end
+	end
+	
+	if specId and specId > 0 and (supportSpecs[specId] or IsSpecSupport(specId)) then
+		return "SUPPORT"
+	end
+	
+	local r1, r2, r3, r4 = orig_UnitGroupRolesAssigned(unit)
+	local isTank, isHealer, isDamage, isSupport
+	if type(r1) == "string" then
+		isTank = (r1 == "TANK")
+		isHealer = (r1 == "HEALER")
+		isDamage = (r1 == "DAMAGER" or r1 == "DPS")
+		isSupport = (r1 == "SUPPORT")
+	else
+		isTank = r1
+		isHealer = r2
+		isDamage = r3
+		isSupport = r4
+	end
+	if isSupport then
+		return "SUPPORT"
+	elseif isTank then
+		return "TANK"
+	elseif isHealer then
+		return "HEALER"
+	elseif isDamage then
+		return "DAMAGER"
+	end
+	return "NONE"
+end
+
+-- Effective-role cache: spec lookups (Details cache / inspect data) are not
+-- free, and role checks run from role sorting, role icons and nameplate
+-- style filters. Wiped on a short TTL and by role/roster events (RoleSort).
+local unitRoleCache = {}
+local unitRoleCacheTime = 0
+local ROLE_CACHE_TTL = 3
+
+function E:WipeUnitRoleCache()
+	if next(unitRoleCache) then
+		wipe(unitRoleCache)
+	end
+	unitRoleCacheTime = GetTime()
+end
+
+local roleWipeEventsFrame = CreateFrame("Frame")
+roleWipeEventsFrame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
+roleWipeEventsFrame:RegisterEvent("LFG_ROLE_UPDATE")
+roleWipeEventsFrame:RegisterEvent("ROLE_CHANGED_INFORM")
+roleWipeEventsFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+roleWipeEventsFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+roleWipeEventsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+roleWipeEventsFrame:SetScript("OnEvent", function()
+	E:WipeUnitRoleCache()
+end)
+
+--- Effective group role of a unit: "TANK", "HEALER", "DAMAGER", "SUPPORT" or "NONE".
+--- SUPPORT is resolved through CoA spec detection (own spec, Details spec cache,
+--- inspect data), falling back to the native role API.
+--- NOTE: this deliberately no longer replaces _G.UnitGroupRolesAssigned. The old
+--- global override answered differently depending on issecure() and on async
+--- inspect data, which made the secure group headers re-bucket units between
+--- updates - that was the role sorting "swapping" bug.
+function E:GetUnitRole(unit)
+	if not unit then return "NONE" end
+
+	local now = GetTime()
+	if (now - unitRoleCacheTime) > ROLE_CACHE_TTL then
+		E:WipeUnitRoleCache()
+	end
+
+	local guid = UnitGUID(unit)
+	if not guid then
+		return GetUnitRealRole(unit)
+	end
+
+	local role = unitRoleCache[guid]
+	if not role then
+		role = GetUnitRealRole(unit) or "NONE"
+		unitRoleCache[guid] = role
+	end
+	return role
 end

@@ -162,15 +162,42 @@ function MM:Initialize()
 		end
 	end 
 
-	WorldMapButton:RegisterForClicks("LeftButtonDownm", "RightButtonDown","MiddleButtonDown");
-	WorldMapButton:HookScript("OnClick",function(self,click)
-		if click == "MiddleButton" and not IsShiftKeyDown() and not IsControlKeyDown() and not IsAltKeyDown() then
-			MM:CreateMark(nil,false);
+	local wasMiddleDown = false
+	local poller = CreateFrame("Frame")
+	local function pollerOnUpdate()
+		if WorldMapFrame:IsShown() and WorldMapButton:IsShown() and WorldMapButton:IsMouseOver() then
+			local isDown = IsMouseButtonDown("MiddleButton")
+			if isDown and not wasMiddleDown then
+				if not IsShiftKeyDown() and not IsControlKeyDown() and not IsAltKeyDown() then
+					MM:CreateMark(nil, false)
+				end
+			end
+			wasMiddleDown = isDown
+		else
+			wasMiddleDown = false
 		end
+	end
+	-- Only poll for the middle-click while the map is actually open;
+	-- previously this OnUpdate ran every frame for the whole session
+	WorldMapFrame:HookScript("OnShow", function()
+		wasMiddleDown = false
+		poller:SetScript("OnUpdate", pollerOnUpdate)
 	end)
+	WorldMapFrame:HookScript("OnHide", function()
+		poller:SetScript("OnUpdate", nil)
+	end)
+	if WorldMapFrame:IsShown() then
+		poller:SetScript("OnUpdate", pollerOnUpdate)
+	end
 
 	local function EventHandler(self, event, ...)
+		if not WorldMapFrame:IsShown() then return end
+		local start = debugprofilestop()
 		MM:RefreshAll();
+		local elapsed = debugprofilestop() - start
+		if elapsed > 1 then
+			_G.ElvUI_LogDiagnostic(string.format("[Profile] MapMarkers RefreshAll took: %.2f ms", elapsed))
+		end
 	end
 	MM.imFrame = CreateFrame("Frame",nil,UIParent);
 
@@ -192,6 +219,7 @@ local function InitializeCallback()
 end
 
 E:RegisterInitialModule(MM:GetName(), InitializeCallback)
+
 
 
 

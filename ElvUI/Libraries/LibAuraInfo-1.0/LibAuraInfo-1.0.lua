@@ -996,7 +996,7 @@ function lib.frame:PARTY_KILL(...)
 end
 
 function lib:FlagIsPlayer(flags)
-	if band(flags, COMBATLOG_OBJECT_TYPE_PLAYER) == COMBATLOG_OBJECT_TYPE_PLAYER then
+	if flags and type(flags) == "number" and COMBATLOG_OBJECT_TYPE_PLAYER and type(COMBATLOG_OBJECT_TYPE_PLAYER) == "number" and band(flags, COMBATLOG_OBJECT_TYPE_PLAYER) == COMBATLOG_OBJECT_TYPE_PLAYER then
 		return true
 	end
 end

@@ -12,8 +12,16 @@ local displayNumberString = ""
 
 local lastPanel
 
+local acc = 0
 local function OnUpdate(self, elapsed)
 	timer = timer + elapsed
+
+	-- 30fps cap: the hundredths display stays visually smooth without a
+	-- string format + text set on every rendered frame for the whole fight
+	acc = acc + elapsed
+	if acc < 0.033 then return end
+	acc = 0
+
 	self.text:SetFormattedText(displayNumberString, format("%02d:%02d:%02d", floor(timer / 60), timer % 60, (timer - floor(timer)) * 100))
 end
 

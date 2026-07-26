@@ -191,7 +191,21 @@ local function GetClassPower(Class)
 end
 E.TagFunctions.GetClassPower = GetClassPower
 
+-- The GUID-keyed status caches below would otherwise accumulate one entry
+-- per distinct player ever seen AFK/DND/dead/offline, for the whole session
+local statusWipeTables = {}
+local statusWipeFrame = CreateFrame("Frame")
+statusWipeFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+statusWipeFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+statusWipeFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+statusWipeFrame:SetScript("OnEvent", function()
+	for i = 1, #statusWipeTables do
+		wipe(statusWipeTables[i])
+	end
+end)
+
 local unitStatus = {}
+statusWipeTables[#statusWipeTables + 1] = unitStatus
 local function GetUnitStatus(unit)
 	if not UnitIsPlayer(unit) then return end
 	local guid = UnitGUID(unit)
@@ -869,6 +883,7 @@ end
 
 do
 	local unitStatus = {}
+	statusWipeTables[#statusWipeTables + 1] = unitStatus
 	E:AddTag('statustimer', 1, function(unit)
 		if not UnitIsPlayer(unit) then return end
 

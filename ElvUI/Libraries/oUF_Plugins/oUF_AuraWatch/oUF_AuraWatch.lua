@@ -296,7 +296,7 @@ local function Update(self, event, unit)
 			if element.strictMatching then
 				key = spellID
 			else
-				key = name..texture
+				key = name..tostring(texture)
 			end
 
 			icon = icons[key]

@@ -1,4 +1,4 @@
-﻿--[[
+--[[
 	Deconstruct Module for ElvUI (WoW 3.3.5a / Ascension)
 	Adapted from ElvUI_SLE retail version
 	
@@ -397,7 +397,7 @@ end
 function D:ConstructRealDecButton()
 	D.DeconstructionReal = CreateFrame('Button', 'ElvUI_DeconReal', E.UIParent, 'SecureActionButtonTemplate')
 	D.DeconstructionReal:SetScript('OnEvent', function(obj, event, ...) obj[event](obj, ...) end)
-	D.DeconstructionReal:RegisterForClicks('AnyUp', 'AnyDown')
+	D.DeconstructionReal:RegisterForClicks('AnyUp')
 	D.DeconstructionReal:SetFrameStrata('TOOLTIP')
 
 	D.DeconstructionReal.OnLeave = function(frame)
@@ -598,7 +598,8 @@ local function CreateDeconstructButton(bagFrame)
 	local button = CreateFrame("Button", nil, bagFrame.holderFrame)
 	button:Size(16 + E.Border)
 	button:SetTemplate()
-	button:Point("RIGHT", bagFrame.vendorGraysButton, "LEFT", -5, 0)
+	local anchor = bagFrame.transmogButton or bagFrame.vendorGraysButton
+	button:Point("RIGHT", anchor, "LEFT", -5, 0)
 	button:SetNormalTexture("Interface\\ICONS\\INV_Rod_Enchantedcobalt")
 	button:GetNormalTexture():SetTexCoord(unpack(E.TexCoords))
 	button:GetNormalTexture():SetInside()
@@ -640,11 +641,8 @@ local function SetupDeconstructButton()
 
 	-- Only create the real deconstruct button and hooks once
 	if not D.DeconstructionReal then
-		D:ConstructRealDecButton()
-
-		-- Hook GameTooltip to detect when mousing over items
-		GameTooltip:HookScript('OnShow', function() D:DeconstructParser() end)
-		GameTooltip:HookScript('OnUpdate', function() D:DeconstructParser() end)
+		-- D:ConstructRealDecButton() is now called in Initialize to prevent taint
+		-- GameTooltip hooks are also moved to Initialize
 	end
 
 	-- Hide deconstruct mode when bags close
@@ -665,6 +663,14 @@ end
 function D:Initialize()
 	if not E.private.bags.enable then return end
 	if not E.db.bags.deconstruct then return end -- Check if deconstruct is enabled
+
+	if not D.DeconstructionReal then
+		D:ConstructRealDecButton()
+
+		-- Hook GameTooltip to detect when mousing over items
+		GameTooltip:HookScript('OnShow', function() D:DeconstructParser() end)
+		GameTooltip:HookScript('OnUpdate', function() D:DeconstructParser() end)
+	end
 
 	-- Hook into Layout to setup button for bags and reapply dimming
 	hooksecurefunc(B, "Layout", function(_, isBank)

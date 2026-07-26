@@ -32,4 +32,5 @@
 	<Script file="RoleIcons.lua"/>
 	<Script file="Threat.lua"/>
 	<Script file="Trinket.lua"/>
+	<Script file="RareElite.lua"/>
 </Ui>

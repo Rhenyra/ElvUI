@@ -77,8 +77,8 @@ function E:ScanTooltipTextures(clean, grabTextures)
 end
 
 function E:GetPlayerRole()
-	local isTank, isHealer, _ = UnitGroupRolesAssigned("player")
-	return isTank and "TANK" or isHealer and "HEALER" or "DAMAGER"
+	local isTank, isHealer, isDamage, isSupport = UnitGroupRolesAssigned("player")
+	return isSupport and "SUPPORT" or isTank and "TANK" or isHealer and "HEALER" or "DAMAGER"
 end
 
 function E:GetPlayerDesiredRole()

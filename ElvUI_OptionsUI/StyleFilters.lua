@@ -385,7 +385,7 @@ for option, name in next, { myRole = L["Player"], unitRole = L["Unit"] } do
 	StyleFilters.triggers.args.role.args[option] = ACH:Group(name, nil, nil, nil, function(info) local triggers = GetFilter(true) return triggers[option] and triggers[option][info[#info]] end, function(info, value) local triggers = GetFilter(true) if not triggers[option] then triggers[option] = {} end triggers[option][info[#info]] = value NP:ConfigureAll() end)
 	StyleFilters.triggers.args.role.args[option].inline = true
 
-	for role, roleLocale in next, { tank = L["Tank"], healer = L["Healer"], damager = L["DAMAGER"] } do
+	for role, roleLocale in next, { tank = L["Tank"], healer = L["Healer"], damager = L["DAMAGER"], support = L["Support"] } do
 		StyleFilters.triggers.args.role.args[option].args[role] = ACH:Toggle(roleLocale)
 	end
 end

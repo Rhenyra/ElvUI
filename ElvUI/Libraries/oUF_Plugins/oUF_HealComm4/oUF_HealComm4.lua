@@ -53,11 +53,16 @@ local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitName = UnitName
 local UnitGetIncomingHeals = UnitGetIncomingHeals
+local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
 
 local enabledUF, enabled = {}, nil
 
-local function Update(self)
-	local unit = self.unit
+local function Update(self, event, unit)
+	if not self.unit then return end
+	if unit and unit ~= self.unit and not UnitIsUnit(unit, self.unit) then
+		return
+	end
+	unit = self.unit
 	local element = self.HealCommBar
 
 	--[[ Callback: HealthPrediction:PreUpdate(unit)
@@ -72,6 +77,7 @@ local function Update(self)
 
 	local myIncomingHeal = UnitGetIncomingHeals(unit, UnitName("player")) or 0
 	local allIncomingHeal = UnitGetIncomingHeals(unit) or 0
+	local absorb = UnitGetTotalAbsorbs and UnitGetTotalAbsorbs(unit) or 0
 	local health = UnitHealth(unit)
 	local maxHealth = UnitHealthMax(unit)
 	local maxOverflowHP = maxHealth * element.maxOverflow
@@ -99,16 +105,23 @@ local function Update(self)
 		element.otherBar:Show()
 	end
 
-	--[[ Callback: HealthPrediction:PostUpdate(unit, myIncomingHeal, otherIncomingHeal)
+	if element.absorbBar then
+		element.absorbBar:SetMinMaxValues(0, maxHealth)
+		element.absorbBar:SetValue(absorb)
+		element.absorbBar:Show()
+	end
+
+	--[[ Callback: HealthPrediction:PostUpdate(unit, myIncomingHeal, otherIncomingHeal, absorb)
 	Called after the element has been updated.
 
 	* self              - the HealthPrediction element
 	* unit              - the unit for which the update has been triggered (string)
 	* myIncomingHeal    - the amount of incoming healing done by the player (number)
 	* otherIncomingHeal - the amount of incoming healing done by others (number)
+	* absorb            - the amount of total absorbs (number)
 	--]]
 	if element.PostUpdate then
-		return element:PostUpdate(unit, myIncomingHeal, otherIncomingHeal)
+		return element:PostUpdate(unit, myIncomingHeal, otherIncomingHeal, absorb)
 	end
 end
 
@@ -154,6 +167,7 @@ local function Enable(self)
 		self:RegisterEvent("UNIT_HEALTH", Path)
 		self:RegisterEvent("UNIT_MAXHEALTH", Path)
 		self:RegisterEvent("UNIT_HEAL_PREDICTION", Path)
+		self:RegisterEvent("UNIT_ABSORB_AMOUNT_CHANGED", Path)
 
 		if not element.maxOverflow then
 			element.maxOverflow = 1.05
@@ -184,9 +198,14 @@ local function Disable(self)
 			element.otherBar:Hide()
 		end
 
+		if element.absorbBar then
+			element.absorbBar:Hide()
+		end
+
 		self:UnregisterEvent("UNIT_HEALTH", Path)
 		self:UnregisterEvent("UNIT_MAXHEALTH", Path)
 		self:UnregisterEvent("UNIT_HEAL_PREDICTION", Path)
+		self:UnregisterEvent("UNIT_ABSORB_AMOUNT_CHANGED", Path)
 	end
 end
 

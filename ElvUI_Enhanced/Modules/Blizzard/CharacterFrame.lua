@@ -809,7 +809,34 @@ local function GetItemLevelColor(unit)
 end
 ]]
 
-local function GetAverageItemLevel()
+local function GetAverageItemLevel(unit)
+	if not unit then unit = "player" end
+	if UnitAverageItemLevel then
+		local ilvl = UnitAverageItemLevel(unit)
+		if ilvl and ilvl > 0 then
+			local colorCount, sumR, sumG, sumB = 0, 0, 0, 0
+			for slot = INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED do
+				if slot ~= INVSLOT_BODY and slot ~= INVSLOT_TABARD then
+					local itemLink = GetInventoryItemLink(unit, slot)
+					if itemLink then
+						local _, _, quality = GetItemInfo(itemLink)
+						if quality and qualityColors[quality] then
+							colorCount = colorCount + 1
+							sumR = sumR + qualityColors[quality][1]
+							sumG = sumG + qualityColors[quality][2]
+							sumB = sumB + qualityColors[quality][3]
+						end
+					end
+				end
+			end
+			if colorCount == 0 then
+				return ilvl, 1, 1, 1
+			else
+				return ilvl, (sumR / colorCount), (sumG / colorCount), (sumB / colorCount)
+			end
+		end
+	end
+
 	local items = 15
 	local ilvl = 0
 	local colorCount, sumR, sumG, sumB = 0, 0, 0, 0
@@ -817,7 +844,7 @@ local function GetAverageItemLevel()
 	-- same ilvl calculation as C_Player:GetAverageItemLevel()
 	for slot = INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED do
 		if slot ~= INVSLOT_BODY and slot ~= INVSLOT_TABARD then
-			local itemLink = GetInventoryItemLink("player", slot)
+			local itemLink = GetInventoryItemLink(unit, slot)
 
 			if itemLink then
 				local _, _, quality, itemLevel, _, _, _, _, itemEquipLoc = GetItemInfo(itemLink)
@@ -894,8 +921,8 @@ function module:ItemLevel(statFrame, unit)
 --	end
 --	statFrame.Label:SetTextColor(GetItemLevelColor())
 
-	local avgItemLevel, r, g, b = GetAverageItemLevel()
-	statFrame.Label:SetFormattedText("%.1f", avgItemLevel)
+	local avgItemLevel, r, g, b = GetAverageItemLevel(unit)
+	statFrame.Label:SetFormattedText("%.2f", avgItemLevel)
 	statFrame.Label:SetTextColor(r, g, b)
 end
 

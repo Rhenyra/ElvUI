@@ -1,5 +1,7 @@
 local E, L, V, P, G = unpack(ElvUI)
 local NP = E:GetModule('NamePlates')
+
+local GetTime = GetTime
 local oUF = E.oUF
 
 local _G = _G
@@ -183,6 +185,14 @@ local function Update(self, event, arg1)
 
 	local unit = (event == 'UNIT_NAME_UPDATE' and arg1) or self.unit
 	if unit ~= self.unit then return end
+
+	-- UNIT_NAME_UPDATE can fire in bursts; each Update is a full tooltip scan.
+	-- Quest progress changes still come through instantly via QUEST_LOG_UPDATE.
+	if event == 'UNIT_NAME_UPDATE' or event == 'QUEST_LOG_UPDATE' then
+		local now = GetTime()
+		if element.lastNameScan and (now - element.lastNameScan) < 0.5 then return end
+		element.lastNameScan = now
+	end
 
 	if element.PreUpdate then
 		element:PreUpdate()
