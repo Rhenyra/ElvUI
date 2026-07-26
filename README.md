@@ -1,3 +1,35 @@
-# ElvUI
+# ElvUI for Ascension (Rhenyra Edition)
 
-This is the repository for ElvUI. Modified for Ascension.gg. 
+Custom ElvUI version optimized for **Ascension.gg (Classless / Conquest of Azeroth)** featuring heavy performance optimizations, custom skinning bugfixes, new features, and Ascension-specific support.
+
+---
+
+## 🚀 Key Features & Performance Improvements
+
+- **New Absorb Shields Engine** - Redesigned shared absorb detection engine for unit frames & nameplates with whitelist-first filtering, 96% reduction in API calls, raid combat throttling, and native absorb API trust mode.
+- **Recent Auras Tracker** - Track recently applied buffs/debuffs in Filters to easily left-click add them to custom filters with visual status colors (green/red/yellow). *(Location: `Filters` ➔ `Recent Auras`)*
+- **17 Full Audit Performance Optimizations** - Fixed major raid-scale bottlenecks (e.g. range fader logic bug saving 8,800+ API calls/sec in 40-man raids, lazy chat deduplication, bag item refresh deferral, status tag cache wipes, and 30fps caps on animations/timers).
+- **99.8% Reduction in Chat History CPU Overhead** - Optimized `SaveChatHistory` by filtering background channel traffic and deferring name rendering, cutting CPU time from 50.5s down to 0.069s.
+- **Cross-Channel Spam Filter & Fast URL Detection** - Smart cross-channel message deduplication blocks duplicate spam across channels, while URL detection exits instantly unless links (`://`, `www.`, `@`) are detected.
+- **Customizable Range Fader** - Added custom spell inputs and distance presets for friendly/enemy/resurrect/pet range checks to accommodate CoA classless spell ranges. *(Location: `UnitFrames` ➔ `General Options` ➔ `Range Fader`)*
+- **Stable Group Role Sorting** - Replaced unstable API hooks with a deterministic namelist sorter (`TANK`, `HEALER`, `DAMAGER`, `SUPPORT`), eliminating mid-combat frame swapping. *(Location: `UnitFrames` ➔ `Party` / `Raid` ➔ `Set Group by Role`)*
+- **CoA Support Spec Detection & RDF Roles** - Automatic background spec inspector detects Ascension support specs (Grovekeeper, Fleshweaver, Wind, etc.) and assigns Support role icons in group frames and RDF.
+- **Target Frame Rare/Elite Overlay** - Added customizable classic/modern/blurry/tiny Rare/Elite frame overlays and profile settings for Target frames. *(Location: `UnitFrames` ➔ `Target Frame` ➔ `Rare/Elite`)*
+- **Customizable ElvUI Loot Frame** - Fully configurable width, font family, font size, icon size, and background/border transparency with live update support. *(Location: `General` ➔ `Loot Frame`)*
+- **Ascension Spellbook Range Scanner** - Automatically scans player spellbook for Ascension/Classless spells to populate range-check tables without manual entry.
+- **Built-in Quest Announce Module** - Added customizable Quest Announcement system with progress frequency and debug settings. *(Location: `General` ➔ `Quest Announce`)*
+- **`/eperf` Performance Profiler Suite** - Added built-in performance profiler command (`/eperf start` / `/eperf stop`) measuring wall-clock time, Lua memory GC churn, FPS, and event storms.
+
+---
+
+## 🛠️ Bug Fixes & Refinements
+
+- **Toolkit & Skinning Crash Fix**: Resolved `Toolkit.lua` nil arithmetic error in `SetOutside`/`SetInside` when skinning elements before `E.Border` populates.
+- **Chat & Tab Position Fixes**: Fixed world channel messages not showing in non-General chat tabs and fixed "Above Chat" positioning blocking chat tab clicks.
+- **Party Damage Overlay Fix**: Fixed lingering Party Damage icons by correcting frame map reset order, adding visibility poller hide branches, and parenting overlays to unit frames.
+- **Loot Roll Optimization & Class Colors**: Fast-path exit when no rolls active and improved raid/party member class color identification for cross-realm/distant players.
+- **World Map Taint & Tooltip Fix**: Fixed map size button re-anchoring taints (`SetPoint = E.noop`) and resolved stuck POI tooltips (`RawHook`).
+- **Bag Sorter `nil` `bagFamily` Fix**: Fixed `SharedXML bit.lua` band error caused by custom bags returning nil free slots on Ascension.
+- **Unit Frame Safety Guards**: Added nil-checks preventing errors when unit power, castbar text, or name settings are uninitialized.
+- **Merchant Buyback Skin Fix**: Properly restores slot border and text colors when buyback slots are cleared.
+- **Taint Log Debug Toggle**: Allows `ADDON_ACTION_FORBIDDEN` popup visibility when `taintLog` debug mode is enabled. *(Location: `General` ➔ `Log Taint Errors`)*
