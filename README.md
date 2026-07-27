@@ -10,6 +10,10 @@ Custom ElvUI version optimized for **Ascension.gg (Classless / Conquest of Azero
   
   ![Party Damage Preview](Media/party_damage_preview.png)
 
+- **Customizable Threat Indicator** - Full custom threat display for unit frames (Party, Raid, Target, Player) featuring dynamic threat glow borders, state indicators, and customizable threat thresholds. *(Location: `UnitFrames` ➔ `[Select Unit]` ➔ `Threat`)*
+
+  ![Threat Indicator Preview](Media/threat_indicator_preview.png)
+
 - **New Absorb Shields Engine** - Redesigned shared absorb detection engine for unit frames & nameplates with whitelist-first filtering, 96% reduction in API calls, raid combat throttling, and native absorb API trust mode.
 
   ![Absorb Shields Engine](Media/absorb_shields_engine.png)
