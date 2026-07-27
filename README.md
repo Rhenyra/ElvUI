@@ -10,7 +10,7 @@ Custom ElvUI version optimized for **Ascension.gg (Classless / Conquest of Azero
   
   ![Party Damage Preview](Media/party_damage_preview.png)
 
-- **Customizable Threat Indicator** - Full custom threat display for unit frames (Party, Raid, Target, Player) featuring dynamic threat glow borders, state indicators, and customizable threat thresholds. *(Location: `UnitFrames` ➔ `[Select Unit]` ➔ `Threat`)*
+- **Customizable ThreatIndicator** - Custom threat and mob aggro display for unit frames (Party, Raid, Target, Player) that shows the **exact count of mobs currently targeting the player**, along with dynamic threat glow borders and customizable threat state thresholds. *(Location: `UnitFrames` ➔ `[Select Unit]` ➔ `ThreatIndicator`)*
 
   ![Threat Indicator Preview](Media/threat_indicator_preview.png)
 
