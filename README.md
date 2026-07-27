@@ -12,23 +12,31 @@ Custom ElvUI version optimized for **Ascension.gg (Classless / Conquest of Azero
 
 - **New Absorb Shields Engine** - Redesigned shared absorb detection engine for unit frames & nameplates with whitelist-first filtering, 96% reduction in API calls, raid combat throttling, and native absorb API trust mode.
 
+  ![Absorb Shields Engine](Media/absorb_shields_engine.png)
+
 - **Recent Auras Tracker** - Track recently applied buffs/debuffs in Filters to easily left-click add them to custom filters with visual status colors (green/red/yellow). *(Location: `Filters` ➔ `Recent Auras`)*
+
+  ![Recent Aura Tracker](Media/recent_aura_tracker.png)
 
 - **Target Frame Rare/Elite Overlay** - Added customizable classic/modern/blurry/tiny Rare/Elite frame overlays and profile settings for Target frames. *(Location: `UnitFrames` ➔ `Target Frame` ➔ `Rare/Elite`)*
 
   ![Rare/Elite Overlay](Media/rare_elite_overlay.png)
 
+- **CoA Support Spec Detection & RDF Roles** - Automatic background spec inspector detects Ascension support specs (Grovekeeper, Fleshweaver, Wind, etc.) and assigns Support role icons in group frames and RDF.
+
+  ![Support Role Icon](Media/support_role_icon.png)
+
+- **Cross-Channel Spam Filter & Fast URL Detection** - Smart cross-channel message deduplication blocks duplicate spam across channels, while URL detection exits instantly unless links (`://`, `www.`, `@`) are detected.
+
+  ![Multi-Channel Spam Filter](Media/multi_channel_spam_filter.png)
+
 - **17 Full Audit Performance Optimizations** - Fixed major raid-scale bottlenecks (e.g. range fader logic bug saving 8,800+ API calls/sec in 40-man raids, lazy chat deduplication, bag item refresh deferral, status tag cache wipes, and 30fps caps on animations/timers).
 
 - **99.8% Reduction in Chat History CPU Overhead** - Optimized `SaveChatHistory` by filtering background channel traffic and deferring name rendering, cutting CPU time from 50.5s down to 0.069s.
 
-- **Cross-Channel Spam Filter & Fast URL Detection** - Smart cross-channel message deduplication blocks duplicate spam across channels, while URL detection exits instantly unless links (`://`, `www.`, `@`) are detected.
-
 - **Customizable Range Fader** - Added custom spell inputs and distance presets for friendly/enemy/resurrect/pet range checks to accommodate CoA classless spell ranges. *(Location: `UnitFrames` ➔ `General Options` ➔ `Range Fader`)*
 
 - **Stable Group Role Sorting** - Replaced unstable API hooks with a deterministic namelist sorter (`TANK`, `HEALER`, `DAMAGER`, `SUPPORT`), eliminating mid-combat frame swapping. *(Location: `UnitFrames` ➔ `Party` / `Raid` ➔ `Set Group by Role`)*
-
-- **CoA Support Spec Detection & RDF Roles** - Automatic background spec inspector detects Ascension support specs (Grovekeeper, Fleshweaver, Wind, etc.) and assigns Support role icons in group frames and RDF.
 
 - **ElvUI DTBars2 Module** - Custom datatext bars module allowing creation of additional custom datatext panels positioned anywhere on screen.
 
