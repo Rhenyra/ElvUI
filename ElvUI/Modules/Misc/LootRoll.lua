@@ -154,6 +154,10 @@ local function buttonOnLeave()
 end
 
 local function buttonOnClick(self)
+	if self.parent and self.parent.isTest then
+		M:ReleaseFrame(self.parent)
+		return
+	end
 	RollOnLoot(self.parent.rollID, self.rollType)
 end
 
@@ -209,7 +213,11 @@ end
 
 local function itemOnEnter(self)
 	GameTooltip:SetOwner(self, POSITION == "TOP" and "ANCHOR_BOTTOMLEFT" or "ANCHOR_TOPLEFT")
-	GameTooltip:SetLootRollItem(self.rollID)
+	if self.parent and self.parent.isTest then
+		GameTooltip:SetHyperlink(self.link)
+	else
+		GameTooltip:SetLootRollItem(self.rollID)
+	end
 
 	CursorUpdate(self)
 end
@@ -222,7 +230,11 @@ end
 local function itemOnUpdate(self)
 	if GameTooltip:IsOwned(self) then
 		GameTooltip:SetOwner(self, POSITION == "TOP" and "ANCHOR_BOTTOMLEFT" or "ANCHOR_TOPLEFT")
-		GameTooltip:SetLootRollItem(self.rollID)
+		if self.parent and self.parent.isTest then
+			GameTooltip:SetHyperlink(self.link)
+		else
+			GameTooltip:SetLootRollItem(self.rollID)
+		end
 	end
 
 	CursorOnUpdate(self)
@@ -237,6 +249,7 @@ local function itemOnClick(self)
 end
 
 local function statusbarOnUpdate(self)
+	if self.parent and self.parent.isTest then return end
 	local timeLeft = GetLootRollTimeLeft(self.parent.rollID)
 	if timeLeft < 0 or timeLeft > self.parent.rollTime then
 		timeLeft = 0
@@ -284,8 +297,16 @@ function M:UpdateLootRoll()
 end
 
 function M:TestLootRoll()
+	for _, frame in ipairs(self.RollBars) do
+		if frame and frame.isTest and frame:IsShown() then
+			self:ReleaseFrame(frame)
+			return
+		end
+	end
+
 	local f = self:GetFrame()
-	local rollID = 99999 + (#self.RollBars)
+	local rollID = 99999
+	f.isTest = true
 	f.rollID = rollID
 	f.rollTime = 60000
 
@@ -305,9 +326,9 @@ function M:TestLootRoll()
 	f.bindText:SetText("BoP")
 	f.bindText:SetVertexColor(1, 0.3, 0.1)
 
-	local _, _, _, _, _, _, bgColor = GetLootRollSettings()
+	local _, _, _, _, _, transparency, bgColor = GetLootRollSettings()
 	if f.SetBackdropColor then
-		f:SetBackdropColor(bgColor.r, bgColor.g, bgColor.b, E.db.general.lootRoll and E.db.general.lootRoll.transparency or 0.8)
+		f:SetBackdropColor(bgColor.r, bgColor.g, bgColor.b, transparency)
 	end
 
 	f.needButton:ToggleLootButton(true, nil)
@@ -429,12 +450,14 @@ function M:ReleaseFrame(frame)
 	frame:Hide()
 	frame.rollID = nil
 	frame.rollTime = nil
+	frame.isTest = nil
 
 	for i = 0, 3 do
 		frame.rollButtons[i].text:SetText("")
 	end
 
 	twipe(frame.rollResults)
+	AlertFrame_FixAnchors()
 end
 
 function M:GetFrame()
