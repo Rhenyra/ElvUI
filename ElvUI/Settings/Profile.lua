@@ -39,6 +39,8 @@ P.general = {
 		font = "PT Sans Narrow",
 		fontSize = 12,
 		fontOutline = "OUTLINE",
+		transparency = 0.8,
+		bgColor = {r = 0.06, g = 0.06, b = 0.06},
 	},
 	afk = true,
 	numberPrefixStyle = "ENGLISH",

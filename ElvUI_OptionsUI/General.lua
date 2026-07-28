@@ -720,8 +720,28 @@ E.Options.args.general = {
 							name = L["Font Outline"],
 							values = C.Values.FontFlags,
 						},
-						testRoll = {
+						transparency = {
 							order = 6,
+							type = "range",
+							name = L["Transparency"],
+							min = 0, max = 1, step = 0.05,
+							isPercent = true,
+						},
+						bgColor = {
+							order = 7,
+							type = "color",
+							name = L["Background Color"],
+							get = function(info)
+								local c = E.db.general.lootRoll.bgColor or {r = 0.06, g = 0.06, b = 0.06}
+								return c.r, c.g, c.b
+							end,
+							set = function(info, r, g, b)
+								E.db.general.lootRoll.bgColor = {r = r, g = g, b = b}
+								Misc:UpdateLootRoll()
+							end,
+						},
+						testRoll = {
+							order = 8,
 							type = "execute",
 							name = L["Preview Loot Roll"],
 							func = function() Misc:TestLootRoll() end,
