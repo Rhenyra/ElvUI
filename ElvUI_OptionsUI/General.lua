@@ -727,10 +727,17 @@ E.Options.args.general = {
 							min = 0, max = 1, step = 0.05,
 							isPercent = true,
 						},
-						bgColor = {
+						useQualityColor = {
 							order = 7,
+							type = "toggle",
+							name = L["Quality Color Background"],
+							desc = L["Color the loot roll frame background based on the quality of the item."],
+						},
+						bgColor = {
+							order = 8,
 							type = "color",
 							name = L["Background Color"],
+							disabled = function() return E.db.general.lootRoll.useQualityColor end,
 							get = function(info)
 								local c = E.db.general.lootRoll.bgColor or {r = 0.06, g = 0.06, b = 0.06}
 								return c.r, c.g, c.b
@@ -741,7 +748,7 @@ E.Options.args.general = {
 							end,
 						},
 						testRoll = {
-							order = 8,
+							order = 9,
 							type = "execute",
 							name = L["Preview Loot Roll"],
 							func = function() Misc:TestLootRoll() end,

@@ -96,6 +96,18 @@ S:AddCallback("Skin_Spellbook", function()
 	end)
 
 	for _, button in ipairs(AscensionSpellbookFrameContentProfessions.professionButtons) do
+		button:SetHitRectInsets(0, 0, 24, 0)
+
+		local hl = button:GetHighlightTexture()
+		if hl then
+			hl:ClearAllPoints()
+			hl:SetAllPoints(button.Icon)
+		end
+		if button.Highlight then
+			button.Highlight:ClearAllPoints()
+			button.Highlight:SetAllPoints(button.Icon)
+		end
+
 		hooksecurefunc(button, "SetProfession", function(button, skillID)
 			local _, _, icon = ProfessionUtil.GetProfessionByID(skillID)
 			button.Icon:SetTexture(icon)

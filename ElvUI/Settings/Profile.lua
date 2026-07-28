@@ -40,6 +40,7 @@ P.general = {
 		fontSize = 12,
 		fontOutline = "OUTLINE",
 		transparency = 0.8,
+		useQualityColor = true,
 		bgColor = {r = 0.06, g = 0.06, b = 0.06},
 	},
 	afk = true,

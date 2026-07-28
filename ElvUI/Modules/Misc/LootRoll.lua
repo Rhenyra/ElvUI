@@ -269,20 +269,37 @@ local function GetLootRollSettings()
 	local fontOutline = (db and db.fontOutline) or "OUTLINE"
 	local transparency = (db and db.transparency) or 0.8
 	local bgColor = (db and db.bgColor) or {r = 0.06, g = 0.06, b = 0.06}
-	return width, height, font, fontSize, fontOutline, transparency, bgColor
+	local useQualityColor = (db and db.useQualityColor ~= nil) and db.useQualityColor or true
+	return width, height, font, fontSize, fontOutline, transparency, bgColor, useQualityColor
+end
+
+local function ApplyLootRollBackdrop(frame, qualityColor)
+	local _, _, _, _, _, transparency, bgColor, useQualityColor = GetLootRollSettings()
+	local r, g, b = bgColor.r, bgColor.g, bgColor.b
+	if useQualityColor and qualityColor then
+		r, g, b = qualityColor.r, qualityColor.g, qualityColor.b
+	end
+
+	if frame.backdrop then
+		frame.backdrop:SetBackdropColor(r, g, b, transparency)
+	elseif frame.SetBackdropColor then
+		frame:SetBackdropColor(r, g, b, transparency)
+	end
+
+	if frame.fade then
+		frame.fade:SetAlpha(transparency * 0.5)
+	end
+	if frame.status and frame.status.bg then
+		frame.status.bg:SetAlpha(transparency * 0.2)
+	end
 end
 
 function M:UpdateLootRoll()
-	local width, height, font, fontSize, fontOutline, transparency, bgColor = GetLootRollSettings()
+	local width, height, font, fontSize, fontOutline = GetLootRollSettings()
 	for _, frame in ipairs(self.RollBars) do
 		if frame then
 			frame:Size(width, height)
-			if frame.SetBackdropColor then
-				frame:SetBackdropColor(bgColor.r, bgColor.g, bgColor.b, transparency)
-			end
-			if frame.backdrop then
-				frame.backdrop:SetBackdropColor(bgColor.r, bgColor.g, bgColor.b, transparency)
-			end
+			ApplyLootRollBackdrop(frame, frame.qualityColor)
 			if frame.itemButton then
 				frame.itemButton:Size(height - (E.Border * 2))
 			end
@@ -320,16 +337,14 @@ function M:TestLootRoll()
 	f.status:SetValue(60000)
 
 	local color = ITEM_QUALITY_COLORS[4]
+	f.qualityColor = color
 	f.status:SetStatusBarColor(color.r, color.g, color.b, 0.7)
 	f.status.bg:SetTexture(color.r, color.g, color.b)
 
 	f.bindText:SetText("BoP")
 	f.bindText:SetVertexColor(1, 0.3, 0.1)
 
-	local _, _, _, _, _, transparency, bgColor = GetLootRollSettings()
-	if f.SetBackdropColor then
-		f:SetBackdropColor(bgColor.r, bgColor.g, bgColor.b, transparency)
-	end
+	ApplyLootRollBackdrop(f, color)
 
 	f.needButton:ToggleLootButton(true, nil)
 	f.greedButton:ToggleLootButton(true, nil)
@@ -341,14 +356,12 @@ end
 
 function M:CreateRollFrame()
 	self.numFrames = self.numFrames + 1
-	local width, height, font, fontSize, fontOutline, transparency, bgColor = GetLootRollSettings()
+	local width, height, font, fontSize, fontOutline = GetLootRollSettings()
 
 	local frame = CreateFrame("Frame", format("ElvUI_GroupLootFrame%d", self.numFrames), E.UIParent)
 	frame:Size(width, height)
 	frame:SetTemplate("Transparent")
-	if frame.SetBackdropColor then
-		frame:SetBackdropColor(bgColor.r, bgColor.g, bgColor.b, transparency)
-	end
+	ApplyLootRollBackdrop(frame, nil)
 	frame:SetFrameStrata("DIALOG")
 	frame:Hide()
 
@@ -451,6 +464,7 @@ function M:ReleaseFrame(frame)
 	frame.rollID = nil
 	frame.rollTime = nil
 	frame.isTest = nil
+	frame.qualityColor = nil
 
 	for i = 0, 3 do
 		frame.rollButtons[i].text:SetText("")
@@ -491,13 +505,11 @@ function M:START_LOOT_ROLL(_, rollID, rollTime)
 	f.status:SetValue(rollTime)
 
 	local color = ITEM_QUALITY_COLORS[quality]
+	f.qualityColor = color
 	f.status:SetStatusBarColor(color.r, color.g, color.b, 0.7)
 	f.status.bg:SetTexture(color.r, color.g, color.b)
 
-	local _, _, _, _, _, transparency, bgColor = GetLootRollSettings()
-	if f.SetBackdropColor then
-		f:SetBackdropColor(bgColor.r, bgColor.g, bgColor.b, transparency)
-	end
+	ApplyLootRollBackdrop(f, color)
 
 	f.bindText:SetText(bindOnPickUp and "BoP" or "BoE")
 	f.bindText:SetVertexColor(bindOnPickUp and 1 or 0.3, bindOnPickUp and 0.3 or 1, bindOnPickUp and 0.1 or 0.3)
