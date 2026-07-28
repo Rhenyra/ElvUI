@@ -30,7 +30,7 @@ Custom ElvUI version optimized for **Ascension.gg (Classless / Conquest of Azero
 
   ![Support Role Icon](Media/support_role_icon.png)
 
-- **Customizable Loot Roll Window & Live Preview** - Configurable width, height, font family, font size, and font outline for Loot Roll frames, featuring a built-in `"Preview Loot Roll"` button in options. *(Location: `General` ➔ `Loot Roll Options`)*
+- **Customizable Loot Roll Window & Live Preview** - Configurable width, height, font family, font size, font outline, backdrop transparency, and background color for Loot Roll frames, featuring a built-in `"Preview Loot Roll"` button in options. *(Location: `General` ➔ `Loot Roll Options`)*
 
 - **Unit Frame & Pet Power Bar Custom Color** - Added dedicated Custom Color toggle and RGB color picker for Power bars on Pet and Unit Frames to customize power bar colors independently. *(Location: `UnitFrames` ➔ `Pet` / `[Unit]` ➔ `Power` ➔ `Custom Color`)*
 
@@ -60,6 +60,7 @@ Custom ElvUI version optimized for **Ascension.gg (Classless / Conquest of Azero
 
 ## 🛠️ Bug Fixes & Refinements
 
+- **Spellbook Professions Tooltip Fix**: Fixed profession tooltips covering the unlearn/abandon "X" button when hovering over professions in the spellbook by anchoring tooltips cleanly below the profession cards.
 - **Toolkit & Skinning Crash Fix**: Resolved `Toolkit.lua` nil arithmetic error in `SetOutside`/`SetInside` when skinning elements before `E.Border` populates.
 - **Chat & Tab Position Fixes**: Fixed world channel messages not showing in non-General chat tabs and fixed "Above Chat" positioning blocking chat tab clicks.
 - **Party Damage Overlay Fix**: Fixed lingering Party Damage icons by correcting frame map reset order, adding visibility poller hide branches, and parenting overlays to unit frames.

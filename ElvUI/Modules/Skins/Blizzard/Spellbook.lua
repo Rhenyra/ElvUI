@@ -82,6 +82,19 @@ S:AddCallback("Skin_Spellbook", function()
 	--Professions
 	AscensionSpellbookFrameContentProfessions:StripTextures(true)
 
+	hooksecurefunc(GameTooltip, "SetOwner", function(tt, owner)
+		if owner and owner:GetParent() then
+			local parent = owner:GetParent()
+			if parent == AscensionSpellbookFrameContentProfessions or (parent:GetParent() and parent:GetParent() == AscensionSpellbookFrameContentProfessions) then
+				local profFrame = (parent == AscensionSpellbookFrameContentProfessions) and owner or parent
+				if profFrame and profFrame.AbandonButton and owner ~= profFrame.AbandonButton then
+					tt:ClearAllPoints()
+					tt:Point("TOPLEFT", profFrame, "BOTTOMLEFT", 0, -4)
+				end
+			end
+		end
+	end)
+
 	for _, button in ipairs(AscensionSpellbookFrameContentProfessions.professionButtons) do
 		hooksecurefunc(button, "SetProfession", function(button, skillID)
 			local _, _, icon = ProfessionUtil.GetProfessionByID(skillID)
