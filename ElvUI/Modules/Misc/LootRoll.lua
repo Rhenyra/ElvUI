@@ -286,11 +286,16 @@ local function ApplyLootRollBackdrop(frame, qualityColor)
 		frame:SetBackdropColor(r, g, b, transparency)
 	end
 
+	if frame.status then
+		frame.status:SetStatusBarColor(r, g, b, transparency)
+		if frame.status.bg then
+			frame.status.bg:SetTexture(r, g, b)
+			frame.status.bg:SetAlpha(transparency * 0.2)
+		end
+	end
+
 	if frame.fade then
 		frame.fade:SetAlpha(transparency * 0.5)
-	end
-	if frame.status and frame.status.bg then
-		frame.status.bg:SetAlpha(transparency * 0.2)
 	end
 end
 
@@ -338,8 +343,6 @@ function M:TestLootRoll()
 
 	local color = ITEM_QUALITY_COLORS[4]
 	f.qualityColor = color
-	f.status:SetStatusBarColor(color.r, color.g, color.b, 0.7)
-	f.status.bg:SetTexture(color.r, color.g, color.b)
 
 	f.bindText:SetText("BoP")
 	f.bindText:SetVertexColor(1, 0.3, 0.1)
@@ -506,8 +509,6 @@ function M:START_LOOT_ROLL(_, rollID, rollTime)
 
 	local color = ITEM_QUALITY_COLORS[quality]
 	f.qualityColor = color
-	f.status:SetStatusBarColor(color.r, color.g, color.b, 0.7)
-	f.status.bg:SetTexture(color.r, color.g, color.b)
 
 	ApplyLootRollBackdrop(f, color)
 

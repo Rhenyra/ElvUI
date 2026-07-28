@@ -15,9 +15,13 @@ S:AddCallback("Skin_Spellbook", function()
 	-- AscensionSpellbook
 	AscensionSpellbookFrame:SetWidth(500)
 	AscensionSpellbookFrameNineSlice:StripTextures(true)
+	AscensionSpellbookFrameNineSlice:EnableMouse(false)
+	AscensionSpellbookFrameNineSlice:SetFrameLevel(1)
 	AscensionSpellbookFrame:StripTextures(true)
 	AscensionSpellbookFramePortraitFrame:StripTextures(true)
 	AscensionSpellbookFrameInsetNineSlice:StripTextures(true)
+	AscensionSpellbookFrameInsetNineSlice:EnableMouse(false)
+	AscensionSpellbookFrameInsetNineSlice:SetFrameLevel(1)
 	AscensionSpellbookFrame:CreateBackdrop("Transparent")
 
 	AscensionSpellbookFrame:RegisterForDrag("LeftButton")
@@ -82,34 +86,86 @@ S:AddCallback("Skin_Spellbook", function()
 	--Professions
 	AscensionSpellbookFrameContentProfessions:StripTextures(true)
 
-	hooksecurefunc(GameTooltip, "SetOwner", function(tt, owner)
+	local function GetProfessionNameFromButton(button)
+		if not button then return nil end
+		if button.profName and button.profName ~= "" then return button.profName end
+		if button.name and type(button.name) == "string" and button.name ~= "" then return button.name end
+		if button.Name and button.Name.GetText then
+			local t = button.Name:GetText()
+			if t and t ~= "" then return t end
+		end
+		for i = 1, button:GetNumRegions() do
+			local region = select(i, button:GetRegions())
+			if region and region:GetObjectType() == "FontString" then
+				local text = region:GetText()
+				if text and text ~= "" and not text:find("^%d+/%d+$") and text ~= "Apprentice" and text ~= "Journeyman" and text ~= "Expert" and text ~= "Artisan" and text ~= "Master" and text ~= "Grand Master" then
+					return text
+				end
+			end
+		end
+		return nil
+	end
+
+	local function FixProfessionTooltip(tt)
+		local owner = tt:GetOwner()
 		if owner and owner:GetParent() then
 			local parent = owner:GetParent()
 			if parent == AscensionSpellbookFrameContentProfessions or (parent:GetParent() and parent:GetParent() == AscensionSpellbookFrameContentProfessions) then
 				local profFrame = (parent == AscensionSpellbookFrameContentProfessions) and owner or parent
 				if profFrame and profFrame.AbandonButton and owner ~= profFrame.AbandonButton then
 					tt:ClearAllPoints()
-					tt:Point("TOPLEFT", profFrame, "BOTTOMLEFT", 0, -4)
+					tt:SetPoint("TOPLEFT", AscensionSpellbookFrame, "TOPRIGHT", 10, 0)
 				end
 			end
 		end
-	end)
+	end
+
+	hooksecurefunc(GameTooltip, "SetOwner", FixProfessionTooltip)
+	GameTooltip:HookScript("OnUpdate", FixProfessionTooltip)
 
 	for _, button in ipairs(AscensionSpellbookFrameContentProfessions.professionButtons) do
-		button:SetHitRectInsets(0, 0, 24, 0)
-
 		local hl = button:GetHighlightTexture()
 		if hl then
+			hl:SetTexture(E.media.blankTex)
+			hl:SetVertexColor(1, 1, 1, 0.2)
 			hl:ClearAllPoints()
 			hl:SetAllPoints(button.Icon)
 		end
-		if button.Highlight then
-			button.Highlight:ClearAllPoints()
-			button.Highlight:SetAllPoints(button.Icon)
+		if button.Highlight and button.Highlight ~= hl then
+			button.Highlight:SetTexture(nil)
+		end
+
+		if button.AbandonButton then
+			S:HandleCloseButton(button.AbandonButton)
+			button.AbandonButton:SetHitRectInsets(0, 0, 0, 0)
+			button.AbandonButton:SetFrameStrata("HIGH")
+			button.AbandonButton:SetFrameLevel(200)
+			button.AbandonButton:EnableMouse(true)
+			button.AbandonButton:RegisterForClicks("AnyUp")
+			button.AbandonButton:HookScript("OnEnter", function(self)
+				local parent = self:GetParent()
+				local name = GetProfessionNameFromButton(parent) or GetProfessionNameFromButton(self)
+				GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
+				if name and name ~= "" then
+					GameTooltip:SetText(format("Unlearn %s", name), 1, 1, 1)
+				else
+					GameTooltip:SetText("Unlearn Profession", 1, 1, 1)
+				end
+				GameTooltip:Show()
+			end)
+			button.AbandonButton:HookScript("OnLeave", function(self)
+				GameTooltip:Hide()
+			end)
 		end
 
 		hooksecurefunc(button, "SetProfession", function(button, skillID)
-			local _, _, icon = ProfessionUtil.GetProfessionByID(skillID)
+			local profName, _, icon = ProfessionUtil.GetProfessionByID(skillID)
+			button.profName = profName
+			button.skillID = skillID
+			if button.AbandonButton then
+				button.AbandonButton.profName = profName
+				button.AbandonButton.skillID = skillID
+			end
 			button.Icon:SetTexture(icon)
 			button.Icon:SetTexCoord(unpack(E.TexCoords))
 
@@ -118,7 +174,7 @@ S:AddCallback("Skin_Spellbook", function()
 				extraButton.Icon:SetTexture(extraIcon)
 				extraButton.Icon:SetTexCoord(unpack(E.TexCoords))
 				extraButton.IconBorder:StripTextures()
-				extraButton.Highlight:StripTextures()
+				if extraButton.Highlight then extraButton.Highlight:StripTextures() end
 			end
 
 			if button:IsEnabled() == 0 then
@@ -131,9 +187,7 @@ S:AddCallback("Skin_Spellbook", function()
 		end)
 		S:HandleIcon(button.Icon)
 		button.IconBorder:StripTextures()
-		button.Highlight:StripTextures()
 		S:HandleStatusBar(button.ProgressBar)
-		S:HandleCloseButton(button.AbandonButton)
 		button.ProgressBar.RankText:SetPoint("CENTER", 0, 0)
 	end
 
