@@ -33,6 +33,13 @@ P.general = {
 		fontOutline = "OUTLINE",
 		transparency = 0.8,
 	},
+	lootRoll = {
+		width = 328,
+		height = 28,
+		font = "PT Sans Narrow",
+		fontSize = 12,
+		fontOutline = "OUTLINE",
+	},
 	afk = true,
 	numberPrefixStyle = "ENGLISH",
 	decimalLength = 1,

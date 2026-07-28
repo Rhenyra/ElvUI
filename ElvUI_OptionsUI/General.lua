@@ -677,6 +677,57 @@ E.Options.args.general = {
 						E:StaticPopup_Show("PRIVATE_RL")
 					end
 				},
+				lootRollGroup = {
+					order = 3.5,
+					type = "group",
+					name = L["Loot Roll Options"],
+					guiInline = true,
+					disabled = function() return not E.private.general.lootRoll end,
+					get = function(info) return E.db.general.lootRoll[info[#info]] end,
+					set = function(info, value)
+						E.db.general.lootRoll[info[#info]] = value
+						Misc:UpdateLootRoll()
+					end,
+					args = {
+						width = {
+							order = 1,
+							type = "range",
+							name = L["Width"],
+							min = 200, max = 500, step = 1,
+						},
+						height = {
+							order = 2,
+							type = "range",
+							name = L["Height"],
+							min = 18, max = 50, step = 1,
+						},
+						font = {
+							order = 3,
+							type = "select",
+							dialogControl = "LSM30_Font",
+							name = L["Font"],
+							values = AceGUIWidgetLSMlists.font,
+						},
+						fontSize = {
+							order = 4,
+							type = "range",
+							name = L["Font Size"],
+							min = 6, max = 32, step = 1,
+						},
+						fontOutline = {
+							order = 5,
+							type = "select",
+							name = L["Font Outline"],
+							values = C.Values.FontFlags,
+						},
+						testRoll = {
+							order = 6,
+							type = "execute",
+							name = L["Preview Loot Roll"],
+							func = function() Misc:TestLootRoll() end,
+						},
+					},
+				},
 				hideErrorFrame = {
 					order = 4,
 					type = "toggle",

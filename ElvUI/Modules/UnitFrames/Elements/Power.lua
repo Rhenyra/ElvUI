@@ -85,7 +85,13 @@ function UF:Configure_Power(frame)
 		power.colorReaction = nil
 		power.colorPower = nil
 
-		if self.db.colors.powerclass then
+		if db.power and db.power.customColor and db.power.customColor.enable and db.power.customColor.color then
+			local c = db.power.customColor.color
+			power:SetStatusBarColor(c.r, c.g, c.b)
+			if power.BG then
+				UF:UpdateBackdropTextureColor(power.BG, c.r, c.g, c.b)
+			end
+		elseif self.db.colors.powerclass then
 			power.colorClass = true
 			power.colorReaction = true
 		else
@@ -313,6 +319,15 @@ end
 local tokens = {[0] = "MANA", "RAGE", "FOCUS", "ENERGY", "RUNIC_POWER"}
 function UF:PostUpdatePowerColor()
 	local parent = self.origParent or self:GetParent()
+
+	if parent and parent.db and parent.db.power and parent.db.power.customColor and parent.db.power.customColor.enable and parent.db.power.customColor.color then
+		local c = parent.db.power.customColor.color
+		self:SetStatusBarColor(c.r, c.g, c.b)
+		if self.BG then
+			UF:UpdateBackdropTextureColor(self.BG, c.r, c.g, c.b)
+		end
+		return
+	end
 
 	if parent.isForced then
 		local color = ElvUF.colors.power[tokens[random(0, 4)]]

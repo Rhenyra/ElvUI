@@ -247,11 +247,70 @@ local function statusbarOnUpdate(self)
 	self:SetValue(timeLeft)
 end
 
+local function GetLootRollSettings()
+	local db = E.db.general.lootRoll
+	local width = (db and db.width) or FRAME_WIDTH
+	local height = (db and db.height) or FRAME_HEIGHT
+	local font = (db and db.font) and E.LSM:Fetch("font", db.font) or E.media.normFont
+	local fontSize = (db and db.fontSize) or 12
+	local fontOutline = (db and db.fontOutline) or "OUTLINE"
+	return width, height, font, fontSize, fontOutline
+end
+
+function M:UpdateLootRoll()
+	local width, height, font, fontSize, fontOutline = GetLootRollSettings()
+	for _, frame in ipairs(self.RollBars) do
+		if frame then
+			frame:Size(width, height)
+			if frame.itemButton then
+				frame.itemButton:Size(height - (E.Border * 2))
+			end
+			if frame.bindText then
+				frame.bindText:FontTemplate(font, fontSize, fontOutline)
+			end
+			if frame.itemName then
+				frame.itemName:FontTemplate(font, fontSize, fontOutline)
+			end
+		end
+	end
+end
+
+function M:TestLootRoll()
+	local f = self:GetFrame()
+	local rollID = 99999 + (#self.RollBars)
+	f.rollID = rollID
+	f.rollTime = 60000
+
+	f.itemButton.icon:SetTexture("Interface\\Icons\\INV_Jewelcrafting_Gem_28")
+	f.itemButton.rollID = rollID
+	f.itemButton.link = "|cffa335ee|Hitem:49623:0:0:0:0:0:0:0:80|h[Reins of the Time-Lost Proto-Drake]|h|r"
+
+	f.itemName:SetText("Reins of the Time-Lost Proto-Drake")
+
+	f.status:SetMinMaxValues(0, 60000)
+	f.status:SetValue(60000)
+
+	local color = ITEM_QUALITY_COLORS[4]
+	f.status:SetStatusBarColor(color.r, color.g, color.b, 0.7)
+	f.status.bg:SetTexture(color.r, color.g, color.b)
+
+	f.bindText:SetText("BoP")
+	f.bindText:SetVertexColor(1, 0.3, 0.1)
+
+	f.needButton:ToggleLootButton(true, nil)
+	f.greedButton:ToggleLootButton(true, nil)
+	f.disenchantButton:ToggleLootButton(true, nil, nil)
+
+	f:Show()
+	AlertFrame_FixAnchors()
+end
+
 function M:CreateRollFrame()
 	self.numFrames = self.numFrames + 1
+	local width, height, font, fontSize, fontOutline = GetLootRollSettings()
 
 	local frame = CreateFrame("Frame", format("ElvUI_GroupLootFrame%d", self.numFrames), E.UIParent)
-	frame:Size(FRAME_WIDTH, FRAME_HEIGHT)
+	frame:Size(width, height)
 	frame:SetTemplate()
 	frame:SetFrameStrata("DIALOG")
 	frame:Hide()
@@ -263,7 +322,7 @@ function M:CreateRollFrame()
 	end
 
 	local itemButton = CreateFrame("Button", "$parentIconFrame", frame)
-	itemButton:Size(FRAME_HEIGHT - (E.Border * 2))
+	itemButton:Size(height - (E.Border * 2))
 	itemButton:Point("RIGHT", frame, "LEFT", -(E.Spacing * 3), 0)
 	itemButton:CreateBackdrop()
 	itemButton:SetScript("OnEnter", itemOnEnter)
@@ -300,7 +359,7 @@ function M:CreateRollFrame()
 	status.bg:SetAllPoints()
 
 	local spark = frame:CreateTexture(nil, "OVERLAY")
-	spark:Size(14, FRAME_HEIGHT)
+	spark:Size(14, height)
 	spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
 	spark:SetBlendMode("ADD")
 	status.spark = spark
@@ -327,10 +386,10 @@ function M:CreateRollFrame()
 
 	frame.bindText = frame:CreateFontString()
 	frame.bindText:Point("LEFT", frame.passButton, "RIGHT", 2, 0)
-	frame.bindText:FontTemplate(nil, nil, "OUTLINE")
+	frame.bindText:FontTemplate(font, fontSize, fontOutline)
 
 	local itemName = frame:CreateFontString(nil, "ARTWORK")
-	itemName:FontTemplate(nil, nil, "OUTLINE")
+	itemName:FontTemplate(font, fontSize, fontOutline)
 	itemName:Point("LEFT", frame.bindText, "RIGHT", 1, 0)
 	itemName:Point("RIGHT", frame, "RIGHT", -5, 0)
 	itemName:Size(200, 10)

@@ -113,7 +113,7 @@ function UF:RaidSmartVisibility(event)
 		return
 	end
 	local elapsed = debugprofilestop() - start
-	if elapsed > 1 then
+	if elapsed > 1 and _G.ElvUI_LogDiagnostic then
 		_G.ElvUI_LogDiagnostic(string.format("[Profile] RaidSmartVisibility took: %.2f ms", elapsed))
 	end
 end

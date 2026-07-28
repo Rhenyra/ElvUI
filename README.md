@@ -30,6 +30,10 @@ Custom ElvUI version optimized for **Ascension.gg (Classless / Conquest of Azero
 
   ![Support Role Icon](Media/support_role_icon.png)
 
+- **Customizable Loot Roll Window & Live Preview** - Configurable width, height, font family, font size, and font outline for Loot Roll frames, featuring a built-in `"Preview Loot Roll"` button in options. *(Location: `General` ➔ `Loot Roll Options`)*
+
+- **Unit Frame & Pet Power Bar Custom Color** - Added dedicated Custom Color toggle and RGB color picker for Power bars on Pet and Unit Frames to customize power bar colors independently. *(Location: `UnitFrames` ➔ `Pet` / `[Unit]` ➔ `Power` ➔ `Custom Color`)*
+
 - **Cross-Channel Spam Filter & Fast URL Detection** - Smart cross-channel message deduplication blocks duplicate spam across channels, while URL detection exits instantly unless links (`://`, `www.`, `@`) are detected.
 
   ![Multi-Channel Spam Filter](Media/multi_channel_spam_filter.png)
