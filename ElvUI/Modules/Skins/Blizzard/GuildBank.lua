@@ -126,7 +126,7 @@ S:AddCallbackForAddon("Blizzard_GuildBankUI", "Skin_Blizzard_GuildBankUI", funct
 
 			if link and button then
 				-- Prepare scan tooltip for bind type detection (if enabled)
-				if B.db.showBindType then
+				if B.db and B.db.showBindType then
 					E.ScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
 					E.ScanTooltip:SetGuildBankItem(tab, i)
 					E.ScanTooltip:Show()

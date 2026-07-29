@@ -313,6 +313,8 @@ end
 function B:UpdateSlotAppearance(slot, clink)
 	if not (slot and clink) then return end
 
+	if not B.db then B.db = E.db.bags end
+
 	-- Ensure the slot has appearance elements initialized
 	B:CreateSlotAppearanceElements(slot)
 
@@ -2022,6 +2024,8 @@ function B:UpdateQuestColors(table, indice, r, g, b)
 end
 
 function B:Initialize()
+	B.db = E.db.bags
+
 	B:LoadBagBar()
 
 	--Creating vendor grays frame
@@ -2045,7 +2049,6 @@ function B:Initialize()
 	end
 
 	B.Initialized = true
-	B.db = E.db.bags
 	B.BagFrames = {}
 	B.BankIsOpen = false
 	B.ProfessionColors = {
