@@ -376,12 +376,24 @@ local function BuildABConfig()
 				},
 				disabled = function() return not E.db.actionbar.barTotem.enabled end
 			},
-			buttonsize = {
+			buttonWidth = {
 				order = 7,
 				type = "range",
-				name = L["Button Size"],
-				desc = L["The size of the action buttons."],
+				name = L["Button Width"],
+				desc = L["The width of the action buttons."],
 				min = 15, max = 60, step = 1,
+				get = function(info) return E.db.actionbar.barTotem.buttonWidth or E.db.actionbar.barTotem.buttonsize end,
+				set = function(info, value) E.db.actionbar.barTotem.buttonWidth = value; AB:PositionAndSizeBarTotem() end,
+				disabled = function() return not E.db.actionbar.barTotem.enabled end
+			},
+			buttonHeight = {
+				order = 8,
+				type = "range",
+				name = L["Button Height"],
+				desc = L["The height of the action buttons."],
+				min = 15, max = 60, step = 1,
+				get = function(info) return E.db.actionbar.barTotem.buttonHeight or E.db.actionbar.barTotem.buttonsize end,
+				set = function(info, value) E.db.actionbar.barTotem.buttonHeight = value; AB:PositionAndSizeBarTotem() end,
 				disabled = function() return not E.db.actionbar.barTotem.enabled end
 			},
 			buttonspacing = {
@@ -504,12 +516,24 @@ local function BuildABConfig()
 				min = 1, max = NUM_PET_ACTION_SLOTS, step = 1,
 				disabled = function() return not E.db.actionbar.barPet.enabled end
 			},
-			buttonsize = {
+			buttonWidth = {
 				order = 11,
 				type = "range",
-				name = L["Button Size"],
-				desc = L["The size of the action buttons."],
+				name = L["Button Width"],
+				desc = L["The width of the action buttons."],
 				min = 15, max = 60, step = 1,
+				get = function(info) return E.db.actionbar.barPet.buttonWidth or E.db.actionbar.barPet.buttonsize end,
+				set = function(info, value) E.db.actionbar.barPet.buttonWidth = value; AB:PositionAndSizeBarPet() end,
+				disabled = function() return not E.db.actionbar.barPet.enabled end
+			},
+			buttonHeight = {
+				order = 12,
+				type = "range",
+				name = L["Button Height"],
+				desc = L["The height of the action buttons."],
+				min = 15, max = 60, step = 1,
+				get = function(info) return E.db.actionbar.barPet.buttonHeight or E.db.actionbar.barPet.buttonsize end,
+				set = function(info, value) E.db.actionbar.barPet.buttonHeight = value; AB:PositionAndSizeBarPet() end,
 				disabled = function() return not E.db.actionbar.barPet.enabled end
 			},
 			buttonspacing = {
@@ -647,12 +671,24 @@ local function BuildABConfig()
 				min = 1, max = NUM_PET_ACTION_SLOTS, step = 1,
 				disabled = function() return not E.db.actionbar.stanceBar.enabled end
 			},
-			buttonsize = {
+			buttonWidth = {
 				order = 12,
 				type = "range",
-				name = L["Button Size"],
-				desc = L["The size of the action buttons."],
+				name = L["Button Width"],
+				desc = L["The width of the action buttons."],
 				min = 15, max = 60, step = 1,
+				get = function(info) return E.db.actionbar.stanceBar.buttonWidth or E.db.actionbar.stanceBar.buttonsize end,
+				set = function(info, value) E.db.actionbar.stanceBar.buttonWidth = value; AB:PositionAndSizeBarShapeShift() end,
+				disabled = function() return not E.db.actionbar.stanceBar.enabled end
+			},
+			buttonHeight = {
+				order = 13,
+				type = "range",
+				name = L["Button Height"],
+				desc = L["The height of the action buttons."],
+				min = 15, max = 60, step = 1,
+				get = function(info) return E.db.actionbar.stanceBar.buttonHeight or E.db.actionbar.stanceBar.buttonsize end,
+				set = function(info, value) E.db.actionbar.stanceBar.buttonHeight = value; AB:PositionAndSizeBarShapeShift() end,
 				disabled = function() return not E.db.actionbar.stanceBar.enabled end
 			},
 			buttonspacing = {
@@ -902,12 +938,24 @@ local function BuildABConfig()
 					min = 1, max = NUM_ACTIONBAR_BUTTONS, step = 1,
 					disabled = function() return not E.db.actionbar["bar"..i].enabled end
 				},
-				buttonsize = {
+				buttonWidth = {
 					order = 13,
 					type = "range",
-					name = L["Button Size"],
-					desc = L["The size of the action buttons."],
+					name = L["Button Width"],
+					desc = L["The width of the action buttons."],
 					min = 15, max = 60, step = 1,
+					get = function(info) return E.db.actionbar["bar"..i].buttonWidth or E.db.actionbar["bar"..i].buttonsize end,
+					set = function(info, value) E.db.actionbar["bar"..i].buttonWidth = value; AB:PositionAndSizeBar("bar"..i) end,
+					disabled = function() return not E.db.actionbar["bar"..i].enabled end
+				},
+				buttonHeight = {
+					order = 14,
+					type = "range",
+					name = L["Button Height"],
+					desc = L["The height of the action buttons."],
+					min = 15, max = 60, step = 1,
+					get = function(info) return E.db.actionbar["bar"..i].buttonHeight or E.db.actionbar["bar"..i].buttonsize end,
+					set = function(info, value) E.db.actionbar["bar"..i].buttonHeight = value; AB:PositionAndSizeBar("bar"..i) end,
 					disabled = function() return not E.db.actionbar["bar"..i].enabled end
 				},
 				buttonspacing = {

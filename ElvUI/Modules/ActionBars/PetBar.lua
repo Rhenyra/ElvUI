@@ -112,8 +112,10 @@ function AB:PositionAndSizeBarPet()
 	local backdropSpacing = E:Scale((self.db.barPet.backdropSpacing or self.db.barPet.buttonspacing))
 	local buttonsPerRow = self.db.barPet.buttonsPerRow
 	local numButtons = self.db.barPet.buttons
-	local size = E:Scale(self.db.barPet.buttonsize)
-	local autoCastSize = (size / 2) - (size / 7.5)
+	local buttonWidth = E:Scale(self.db.barPet.buttonWidth or self.db.barPet.buttonsize)
+	local buttonHeight = E:Scale(self.db.barPet.buttonHeight or self.db.barPet.buttonsize)
+	local autoCastWidth = (buttonWidth / 2) - (buttonWidth / 7.5)
+	local autoCastHeight = (buttonHeight / 2) - (buttonHeight / 7.5)
 	local point = self.db.barPet.point
 	local numColumns = ceil(numButtons / buttonsPerRow)
 	local widthMult = self.db.barPet.widthMult
@@ -143,8 +145,8 @@ function AB:PositionAndSizeBarPet()
 		heightMult = 1
 	end
 
-	local barWidth = (size * (buttonsPerRow * widthMult)) + ((buttonSpacing * (buttonsPerRow - 1)) * widthMult) + (buttonSpacing * (widthMult-1)) + ((self.db.barPet.backdrop == true and (E.Border + backdropSpacing) or E.Spacing)*2)
-	local barHeight = (size * (numColumns * heightMult)) + ((buttonSpacing * (numColumns - 1)) * heightMult) + (buttonSpacing * (heightMult-1)) + ((self.db.barPet.backdrop == true and (E.Border + backdropSpacing) or E.Spacing)*2)
+	local barWidth = (buttonWidth * (buttonsPerRow * widthMult)) + ((buttonSpacing * (buttonsPerRow - 1)) * widthMult) + (buttonSpacing * (widthMult-1)) + ((self.db.barPet.backdrop == true and (E.Border + backdropSpacing) or E.Spacing)*2)
+	local barHeight = (buttonHeight * (numColumns * heightMult)) + ((buttonSpacing * (numColumns - 1)) * heightMult) + (buttonSpacing * (heightMult-1)) + ((self.db.barPet.backdrop == true and (E.Border + backdropSpacing) or E.Spacing)*2)
 	bar:Width(barWidth)
 	bar:Height(barHeight)
 
@@ -195,9 +197,9 @@ function AB:PositionAndSizeBarPet()
 
 		button:SetParent(bar)
 		button:ClearAllPoints()
-		button:Size(size)
-		autoCast:SetOutside(button, autoCastSize, autoCastSize)
-		shine:Size(size - E.Border*2)
+		button:Size(buttonWidth, buttonHeight)
+		autoCast:SetOutside(button, autoCastWidth, autoCastHeight)
+		shine:Size(buttonWidth - E.Border*2, buttonHeight - E.Border*2)
 		button:SetAttribute("showgrid", 1)
 
 		if i == 1 then

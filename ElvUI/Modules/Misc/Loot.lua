@@ -128,7 +128,7 @@ local function createSlot(id)
 
 	local iconFrame = CreateFrame("Frame", nil, frame)
 	iconFrame:Size(iconSize - 2)
-	iconFrame:Point("RIGHT", frame)
+	iconFrame:Point("LEFT", frame, "LEFT", 2, 0)
 	iconFrame:SetTemplate("Default")
 	frame.iconFrame = iconFrame
 	E.frames[iconFrame] = nil
@@ -147,16 +147,14 @@ local function createSlot(id)
 
 	local name = frame:CreateFontString(nil, "OVERLAY")
 	name:SetJustifyH("LEFT")
-	name:Point("LEFT", frame)
-	name:Point("RIGHT", icon, "LEFT")
+	name:Point("LEFT", iconFrame, "RIGHT", 6, 0)
+	name:Point("RIGHT", frame, "RIGHT", -4, 0)
 	name:SetNonSpaceWrap(true)
 	name:FontTemplate(font, fontSize, fontOutline)
 	frame.name = name
 
 	local drop = frame:CreateTexture(nil, "ARTWORK")
 	drop:SetTexture(1, 1, 1, 0.15)
-	drop:Point("LEFT", icon, "RIGHT", 0, 0)
-	drop:Point("RIGHT", frame)
 	drop:SetAllPoints(frame)
 	frame.drop = drop
 
@@ -180,6 +178,10 @@ end
 function M:LOOT_CLOSED()
 	StaticPopup_Hide("LOOT_BIND")
 	lootFrame:Hide()
+	lootFrame.isTest = nil
+	lootFrame:StopMovingOrSizing()
+	lootFrame:ClearAllPoints()
+	lootFrame:Point("TOPLEFT", lootFrameHolder, "TOPLEFT")
 
 	for _, v in pairs(lootFrame.slots) do
 		v:Hide()
@@ -307,14 +309,25 @@ function M:LOOT_OPENED(_, autoLoot)
 	local iconSize, font, fontSize, fontOutline, minWidth, transparency = GetLootSettings()
 	lootFrame.title:FontTemplate(font, fontSize + 2, fontOutline)
 	local color = ITEM_QUALITY_COLORS[m]
-	lootFrame:SetBackdropBorderColor(color.r, color.g, color.b, transparency)
-	lootFrame:SetBackdropColor(0, 0, 0, transparency)
+	if lootFrame.backdrop then
+		lootFrame.backdrop:SetBackdropBorderColor(color.r, color.g, color.b, transparency)
+		lootFrame.backdrop:SetBackdropColor(0, 0, 0, transparency)
+	else
+		lootFrame:SetBackdropBorderColor(color.r, color.g, color.b, transparency)
+		lootFrame:SetBackdropColor(0, 0, 0, transparency)
+	end
 	lootFrame:Width(max(w, t, minWidth))
 end
 
 function M:UpdateLootFrame()
 	if not lootFrame then return end
 	local iconSize, font, fontSize, fontOutline, minWidth, transparency = GetLootSettings()
+
+	if lootFrame.backdrop then
+		lootFrame.backdrop:SetBackdropColor(0, 0, 0, transparency)
+	else
+		lootFrame:SetBackdropColor(0, 0, 0, transparency)
+	end
 
 	lootFrame.title:FontTemplate(font, fontSize + 2, fontOutline)
 	for i = 1, #lootFrame.slots do
@@ -327,6 +340,83 @@ function M:UpdateLootFrame()
 		end
 	end
 	anchorSlots(lootFrame)
+	lootFrame:Width(max(lootFrame:GetWidth(), minWidth))
+end
+
+function M:TestLoot()
+	if not lootFrame then return end
+	if lootFrame:IsShown() and lootFrame.isTest then
+		lootFrame:Hide()
+		lootFrame.isTest = nil
+		return
+	end
+
+	lootFrame.isTest = true
+	lootFrame:Show()
+	lootFrame:ClearAllPoints()
+	lootFrame:Point("TOPLEFT", lootFrameHolder, "TOPLEFT")
+	lootFrame.title:SetText("Test Loot Frame (Target)")
+
+	local testItems = {
+		{ name = "Reins of the Time-Lost Proto-Drake", texture = "Interface\\Icons\\INV_Jewelcrafting_Gem_28", count = 1, quality = 4 },
+		{ name = "Shadowmourne", texture = "Interface\\Icons\\INV_Sword_2h_ArtifactShadowmourne_D_01", count = 1, quality = 5 },
+		{ name = "Emblem of Frost", texture = "Interface\\Icons\\INV_Misc_FrostEmblem", count = 5, quality = 3 },
+	}
+
+	local m, w, t = 0, 0, lootFrame.title:GetStringWidth()
+	for i, itemData in ipairs(testItems) do
+		local slot = lootFrame.slots[i] or createSlot(i)
+		local color = ITEM_QUALITY_COLORS[itemData.quality]
+
+		if itemData.count > 1 then
+			slot.count:SetText(itemData.count)
+			slot.count:Show()
+		else
+			slot.count:Hide()
+		end
+
+		if itemData.quality > 1 then
+			slot.drop:SetVertexColor(color.r, color.g, color.b)
+			slot.drop:Show()
+		else
+			slot.drop:Hide()
+		end
+
+		slot.quality = itemData.quality
+		slot.name:SetText(itemData.name)
+		if color then
+			slot.name:SetTextColor(color.r, color.g, color.b)
+		end
+		slot.icon:SetTexture(itemData.texture)
+
+		m = max(m, itemData.quality)
+		w = max(w, slot.name:GetStringWidth())
+
+		slot.questTexture:Hide()
+		slot:Enable()
+		slot:Show()
+	end
+
+	for i = #testItems + 1, #lootFrame.slots do
+		lootFrame.slots[i]:Hide()
+	end
+
+	anchorSlots(lootFrame)
+
+	w = w + 60
+	t = t + 5
+
+	local iconSize, font, fontSize, fontOutline, minWidth, transparency = GetLootSettings()
+	lootFrame.title:FontTemplate(font, fontSize + 2, fontOutline)
+	local color = ITEM_QUALITY_COLORS[m]
+	if lootFrame.backdrop then
+		lootFrame.backdrop:SetBackdropBorderColor(color.r, color.g, color.b, transparency)
+		lootFrame.backdrop:SetBackdropColor(0, 0, 0, transparency)
+	else
+		lootFrame:SetBackdropBorderColor(color.r, color.g, color.b, transparency)
+		lootFrame:SetBackdropColor(0, 0, 0, transparency)
+	end
+	lootFrame:Width(max(w, t, minWidth))
 end
 
 function M:LoadLoot()
@@ -343,11 +433,28 @@ function M:LoadLoot()
 	lootFrame:SetTemplate("Transparent")
 	lootFrame:SetFrameStrata("DIALOG")
 	lootFrame:SetToplevel(true)
+	lootFrame:SetMovable(true)
+	lootFrame:EnableMouse(true)
+	lootFrame:RegisterForDrag("LeftButton")
+	lootFrame:SetScript("OnDragStart", function(self)
+		if self.isTest then
+			self:StartMoving()
+		end
+	end)
+	lootFrame:SetScript("OnDragStop", function(self)
+		if self.isTest then
+			self:StopMovingOrSizing()
+		end
+	end)
 	local iconSize, font, fontSize, fontOutline = GetLootSettings()
 	lootFrame.title = lootFrame:CreateFontString(nil, "OVERLAY")
 	lootFrame.title:FontTemplate(font, fontSize + 2, fontOutline)
 	lootFrame.title:Point("BOTTOMLEFT", lootFrame, "TOPLEFT", 0, 1)
 	lootFrame.slots = {}
+	for i = 1, 16 do
+		local slot = createSlot(i)
+		slot:Hide()
+	end
 	lootFrame:SetScript("OnHide", function()
 		StaticPopup_Hide("CONFIRM_LOOT_DISTRIBUTION")
 		CloseLoot()

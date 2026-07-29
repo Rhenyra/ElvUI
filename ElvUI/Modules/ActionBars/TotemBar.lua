@@ -113,7 +113,9 @@ function AB:MultiCastFlyoutFrame_ToggleFlyout(frame, type, parent)
 
 		if button:IsShown() then
 			numButtons = numButtons + 1
-			button:Size(AB.db.barTotem.buttonsize)
+			local buttonWidth = E:Scale(AB.db.barTotem.buttonWidth or AB.db.barTotem.buttonsize)
+			local buttonHeight = E:Scale(AB.db.barTotem.buttonHeight or AB.db.barTotem.buttonsize)
+			button:Size(buttonWidth, buttonHeight)
 			button:ClearAllPoints()
 
 			if AB.db.barTotem.flyoutDirection == "UP" then
@@ -158,7 +160,8 @@ function AB:MultiCastFlyoutFrame_ToggleFlyout(frame, type, parent)
 		MultiCastFlyoutFrameCloseButton.icon:SetRotation(0)
 	end
 
-	frame:Height(((AB.db.barTotem.buttonsize + AB.db.barTotem.flyoutSpacing) * numButtons) + MultiCastFlyoutFrameCloseButton:GetHeight())
+	local buttonHeight = E:Scale(AB.db.barTotem.buttonHeight or AB.db.barTotem.buttonsize)
+	frame:Height(((buttonHeight + AB.db.barTotem.flyoutSpacing) * numButtons) + MultiCastFlyoutFrameCloseButton:GetHeight())
 end
 
 function AB:TotemOnEnter()
@@ -185,13 +188,14 @@ function AB:PositionAndSizeBarTotem()
 	end
 
 	local buttonSpacing = E:Scale(self.db.barTotem.buttonspacing)
-	local size = E:Scale(self.db.barTotem.buttonsize)
+	local buttonWidth = E:Scale(self.db.barTotem.buttonWidth or self.db.barTotem.buttonsize)
+	local buttonHeight = E:Scale(self.db.barTotem.buttonHeight or self.db.barTotem.buttonsize)
 	local numActiveSlots = MultiCastActionBarFrame.numActiveSlots
 
-	bar:Width((size * (2 + numActiveSlots)) + (buttonSpacing * (2 + numActiveSlots - 1)))
-	MultiCastActionBarFrame:Width((size * (2 + numActiveSlots)) + (buttonSpacing * (2 + numActiveSlots - 1)))
-	bar:Height(size + 2)
-	MultiCastActionBarFrame:Height(size + 2)
+	bar:Width((buttonWidth * (2 + numActiveSlots)) + (buttonSpacing * (2 + numActiveSlots - 1)))
+	MultiCastActionBarFrame:Width((buttonWidth * (2 + numActiveSlots)) + (buttonSpacing * (2 + numActiveSlots - 1)))
+	bar:Height(buttonHeight + 2)
+	MultiCastActionBarFrame:Height(buttonHeight + 2)
 	bar.db = self.db.barTotem
 
 	local point, barAnchor, relativePoint = MultiCastActionBarFrame:GetPoint()
@@ -215,7 +219,7 @@ function AB:PositionAndSizeBarTotem()
 
 	local summonButton = _G.MultiCastSummonSpellButton
 	summonButton:ClearAllPoints()
-	summonButton:Size(size)
+	summonButton:Size(buttonWidth, buttonHeight)
 	summonButton:Point("BOTTOMLEFT", E.Border*2, E.Border*2)
 
 	for i = 1, numActiveSlots do
@@ -223,10 +227,10 @@ function AB:PositionAndSizeBarTotem()
 		local actionButton = _G['MultiCastActionButton'..i]
 		local lastButton = _G['MultiCastSlotButton'..i - 1]
 
-		button:Size(size)
+		button:Size(buttonWidth, buttonHeight)
 		button:ClearAllPoints()
 
-		actionButton:SetSize(size, size) -- these need to match for icon trim setting
+		actionButton:SetSize(buttonWidth, buttonHeight) -- these need to match for icon trim setting
 		actionButton:ClearAllPoints()
 		actionButton:SetAllPoints(actionButton.slotButton)
 
@@ -237,10 +241,10 @@ function AB:PositionAndSizeBarTotem()
 		end
 	end
 
-	MultiCastRecallSpellButton:Size(size)
+	MultiCastRecallSpellButton:Size(buttonWidth, buttonHeight)
 
-	MultiCastFlyoutFrameCloseButton:Width(size)
-	MultiCastFlyoutFrameOpenButton:Width(size)
+	MultiCastFlyoutFrameCloseButton:Width(buttonWidth)
+	MultiCastFlyoutFrameOpenButton:Width(buttonWidth)
 end
 
 function AB:CreateTotemBar()

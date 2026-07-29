@@ -13,12 +13,23 @@ local function GetAuraOptions(headerName)
 			type = "header",
 			name = headerName
 		},
-		size = {
+		width = {
 			order = 2,
 			type = "range",
-			name = L["Size"],
-			desc = L["Set the size of the individual auras."],
-			min = 16, max = 60, step = 2
+			name = L["Icon Width"],
+			desc = L["Set the width of the individual auras."],
+			min = 16, max = 60, step = 2,
+			get = function(info) return E.db.auras[info[#info-1]].width or E.db.auras[info[#info-1]].size end,
+			set = function(info, value) E.db.auras[info[#info-1]].width = value; A:UpdateHeader(ElvUIPlayerBuffs); A:UpdateHeader(ElvUIPlayerDebuffs) end,
+		},
+		height = {
+			order = 2.1,
+			type = "range",
+			name = L["Icon Height"],
+			desc = L["Set the height of the individual auras."],
+			min = 16, max = 60, step = 2,
+			get = function(info) return E.db.auras[info[#info-1]].height or E.db.auras[info[#info-1]].size end,
+			set = function(info, value) E.db.auras[info[#info-1]].height = value; A:UpdateHeader(ElvUIPlayerBuffs); A:UpdateHeader(ElvUIPlayerDebuffs) end,
 		},
 		durationFontSize = {
 			order = 3,

@@ -291,24 +291,25 @@ function A:ConfigureAuras(header, auraTable, weaponPosition)
 	end
 
 	local xOffset, yOffset, wrapXOffset, wrapYOffset, minWidth, minHeight
-	local size = db.size
+	local width = db.width or db.size
+	local height = db.height or db.size
 	local point = DIRECTION_TO_POINT[db.growthDirection]
 	local wrapAfter = db.wrapAfter
 	local maxWraps = db.maxWraps
 
 	if IS_HORIZONTAL_GROWTH[db.growthDirection] then
-		minWidth = ((wrapAfter == 1 and 0 or db.horizontalSpacing) + size) * wrapAfter
-		minHeight = (db.verticalSpacing + size) * maxWraps
-		xOffset = DIRECTION_TO_HORIZONTAL_SPACING_MULTIPLIER[db.growthDirection] * (db.horizontalSpacing + size)
+		minWidth = ((wrapAfter == 1 and 0 or db.horizontalSpacing) + width) * wrapAfter
+		minHeight = (db.verticalSpacing + height) * maxWraps
+		xOffset = DIRECTION_TO_HORIZONTAL_SPACING_MULTIPLIER[db.growthDirection] * (db.horizontalSpacing + width)
 		yOffset = 0
 		wrapXOffset = 0
-		wrapYOffset = DIRECTION_TO_VERTICAL_SPACING_MULTIPLIER[db.growthDirection] * (db.verticalSpacing + size)
+		wrapYOffset = DIRECTION_TO_VERTICAL_SPACING_MULTIPLIER[db.growthDirection] * (db.verticalSpacing + height)
 	else
-		minWidth = (db.horizontalSpacing + size) * maxWraps
-		minHeight = ((wrapAfter == 1 and 0 or db.verticalSpacing) + size) * wrapAfter
+		minWidth = (db.horizontalSpacing + width) * maxWraps
+		minHeight = ((wrapAfter == 1 and 0 or db.verticalSpacing) + height) * wrapAfter
 		xOffset = 0
-		yOffset = DIRECTION_TO_VERTICAL_SPACING_MULTIPLIER[db.growthDirection] * (db.verticalSpacing + size)
-		wrapXOffset = DIRECTION_TO_HORIZONTAL_SPACING_MULTIPLIER[db.growthDirection] * (db.horizontalSpacing + size)
+		yOffset = DIRECTION_TO_VERTICAL_SPACING_MULTIPLIER[db.growthDirection] * (db.verticalSpacing + height)
+		wrapXOffset = DIRECTION_TO_HORIZONTAL_SPACING_MULTIPLIER[db.growthDirection] * (db.horizontalSpacing + width)
 		wrapYOffset = 0
 	end
 
@@ -494,7 +495,8 @@ function A:ConfigureAuras(header, auraTable, weaponPosition)
 		display = min(display, wrapAfter * maxWraps)
 	end
 
-	local pos, spacing, iconSize = self.db.barPosition, self.db.barSpacing, db.size - (E.Border * 2)
+	local pos, spacing = self.db.barPosition, self.db.barSpacing
+	local iconSize = width - (E.Border * 2)
 	local isOnTop = pos == "TOP" and true or false
 	local isOnBottom = pos == "BOTTOM" and true or false
 	local isOnLeft = pos == "LEFT" and true or false
@@ -507,7 +509,7 @@ function A:ConfigureAuras(header, auraTable, weaponPosition)
 		button:ClearAllPoints()
 		button:SetPoint(point, header, cycle * wrapXOffset + tick * xOffset, cycle * wrapYOffset + tick * yOffset)
 
-		button:SetSize(size, size)
+		button:SetSize(width, height)
 
 		if button.text then
 			local font = LSM:Fetch("font", self.db.font)

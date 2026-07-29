@@ -184,6 +184,58 @@ local function increaseRollCount(self, count)
 	end
 end
 
+local function GetLootRollSettings()
+	local db = E.db.general.lootRoll
+	local width = (db and db.width) or FRAME_WIDTH
+	local height = (db and db.height) or FRAME_HEIGHT
+	local font = (db and db.font) and E.LSM:Fetch("font", db.font) or E.media.normFont
+	local fontSize = (db and db.fontSize) or 12
+	local fontOutline = (db and db.fontOutline) or "OUTLINE"
+	local transparency = (db and db.transparency) or 0.8
+	local bgColor = (db and db.bgColor) or {r = 0.06, g = 0.06, b = 0.06}
+	local useQualityColor = true
+	if db and db.useQualityColor ~= nil then
+		useQualityColor = db.useQualityColor
+	end
+	local rollCountFont = (db and db.rollCountFont) and E.LSM:Fetch("font", db.rollCountFont) or E.Media.Fonts.Homespun
+	local rollCountFontSize = (db and db.rollCountFontSize) or 10
+	local rollCountFontOutline = (db and db.rollCountFontOutline) or "MONOCHROMEOUTLINE"
+	local rollCountXOffset = (db and db.rollCountXOffset) or 0
+	local rollCountYOffset = (db and db.rollCountYOffset) or 0
+	return width, height, font, fontSize, fontOutline, transparency, bgColor, useQualityColor, rollCountFont, rollCountFontSize, rollCountFontOutline, rollCountXOffset, rollCountYOffset
+end
+
+local function ApplyLootRollBackdrop(frame, qualityColor)
+	local _, _, _, _, _, transparency, bgColor, useQualityColor = GetLootRollSettings()
+	local r, g, b = bgColor.r, bgColor.g, bgColor.b
+	if useQualityColor and qualityColor then
+		r, g, b = qualityColor.r, qualityColor.g, qualityColor.b
+	end
+
+	if frame.backdrop then
+		frame.backdrop:SetBackdropColor(r, g, b, transparency)
+	elseif frame.SetBackdropColor then
+		frame:SetBackdropColor(r, g, b, transparency)
+	end
+
+	if frame.status then
+		if useQualityColor and qualityColor then
+			frame.status:SetStatusBarColor(r, g, b, transparency * 0.8)
+		else
+			frame.status:SetStatusBarColor(r, g, b, transparency * 0.8)
+		end
+		if frame.status.bg then
+			frame.status.bg:SetTexture(E.media.blankTex)
+			frame.status.bg:SetVertexColor(bgColor.r, bgColor.g, bgColor.b)
+			frame.status.bg:SetAlpha(transparency)
+		end
+	end
+
+	if frame.fade then
+		frame.fade:SetAlpha(transparency * 0.5)
+	end
+end
+
 function M:CreateRollButton(parent, rollType)
 	local data = rollTypes[rollType]
 
@@ -206,7 +258,8 @@ function M:CreateRollButton(parent, rollType)
 	button.newbieText = data.newbieText
 
 	button.text = button:CreateFontString(nil, nil)
-	button.text:FontTemplate(E.Media.Fonts.Homespun, nil, "MONOCHROMEOUTLINE")
+	local _, _, _, _, _, _, _, _, rollCountFont, rollCountFontSize, rollCountFontOutline = GetLootRollSettings()
+	button.text:FontTemplate(rollCountFont, rollCountFontSize, rollCountFontOutline)
 
 	return button
 end
@@ -260,47 +313,8 @@ local function statusbarOnUpdate(self)
 	self:SetValue(timeLeft)
 end
 
-local function GetLootRollSettings()
-	local db = E.db.general.lootRoll
-	local width = (db and db.width) or FRAME_WIDTH
-	local height = (db and db.height) or FRAME_HEIGHT
-	local font = (db and db.font) and E.LSM:Fetch("font", db.font) or E.media.normFont
-	local fontSize = (db and db.fontSize) or 12
-	local fontOutline = (db and db.fontOutline) or "OUTLINE"
-	local transparency = (db and db.transparency) or 0.8
-	local bgColor = (db and db.bgColor) or {r = 0.06, g = 0.06, b = 0.06}
-	local useQualityColor = (db and db.useQualityColor ~= nil) and db.useQualityColor or true
-	return width, height, font, fontSize, fontOutline, transparency, bgColor, useQualityColor
-end
-
-local function ApplyLootRollBackdrop(frame, qualityColor)
-	local _, _, _, _, _, transparency, bgColor, useQualityColor = GetLootRollSettings()
-	local r, g, b = bgColor.r, bgColor.g, bgColor.b
-	if useQualityColor and qualityColor then
-		r, g, b = qualityColor.r, qualityColor.g, qualityColor.b
-	end
-
-	if frame.backdrop then
-		frame.backdrop:SetBackdropColor(r, g, b, transparency)
-	elseif frame.SetBackdropColor then
-		frame:SetBackdropColor(r, g, b, transparency)
-	end
-
-	if frame.status then
-		frame.status:SetStatusBarColor(r, g, b, transparency)
-		if frame.status.bg then
-			frame.status.bg:SetTexture(r, g, b)
-			frame.status.bg:SetAlpha(transparency * 0.2)
-		end
-	end
-
-	if frame.fade then
-		frame.fade:SetAlpha(transparency * 0.5)
-	end
-end
-
 function M:UpdateLootRoll()
-	local width, height, font, fontSize, fontOutline = GetLootRollSettings()
+	local width, height, font, fontSize, fontOutline, _, _, _, rollCountFont, rollCountFontSize, rollCountFontOutline, rollCountXOffset, rollCountYOffset = GetLootRollSettings()
 	for _, frame in ipairs(self.RollBars) do
 		if frame then
 			frame:Size(width, height)
@@ -313,6 +327,17 @@ function M:UpdateLootRoll()
 			end
 			if frame.itemName then
 				frame.itemName:FontTemplate(font, fontSize, fontOutline)
+			end
+			if frame.rollButtons then
+				for rollType, btn in pairs(frame.rollButtons) do
+					if btn and btn.text then
+						btn.text:FontTemplate(rollCountFont, rollCountFontSize, rollCountFontOutline)
+						btn.text:ClearAllPoints()
+						local xOff = rollType == 1 and -1 or 1
+						local yOff = rollType == 1 and 4 or (rollType == 2 and 5 or (rollType == 3 and 4 or 2))
+						btn.text:Point("CENTER", xOff + rollCountXOffset, yOff + rollCountYOffset)
+					end
+				end
 			end
 		end
 	end
@@ -353,6 +378,11 @@ function M:TestLootRoll()
 	f.greedButton:ToggleLootButton(true, nil)
 	f.disenchantButton:ToggleLootButton(true, nil, nil)
 
+	f.passButton.text:SetText("4")
+	f.needButton.text:SetText("2")
+	f.greedButton.text:SetText("1")
+	f.disenchantButton.text:SetText("0")
+
 	f:Show()
 	AlertFrame_FixAnchors()
 end
@@ -367,6 +397,19 @@ function M:CreateRollFrame()
 	ApplyLootRollBackdrop(frame, nil)
 	frame:SetFrameStrata("DIALOG")
 	frame:Hide()
+	frame:SetMovable(true)
+	frame:EnableMouse(true)
+	frame:RegisterForDrag("LeftButton")
+	frame:SetScript("OnDragStart", function(self)
+		if self.isTest then
+			self:StartMoving()
+		end
+	end)
+	frame:SetScript("OnDragStop", function(self)
+		if self.isTest then
+			self:StopMovingOrSizing()
+		end
+	end)
 
 	if POSITION == "TOP" then
 		frame:Point("TOP", self.numFrames > 1 and self.RollBars[self.numFrames - 1] or AlertFrameHolder, "BOTTOM", 0, -4)
@@ -432,10 +475,11 @@ function M:CreateRollFrame()
 	frame.disenchantButton:Point("LEFT", frame.greedButton, "RIGHT", 0, 1)
 	frame.passButton:Point("LEFT", frame.disenchantButton, "RIGHT", 0, 2)
 
-	frame.needButton.text:Point("CENTER", -1, 4)
-	frame.greedButton.text:Point("CENTER", 1, 5)
-	frame.disenchantButton.text:Point("CENTER", 1, 4)
-	frame.passButton.text:Point("CENTER", 1, 2)
+	local _, _, _, _, _, _, _, _, _, _, _, rollCountXOffset, rollCountYOffset = GetLootRollSettings()
+	frame.needButton.text:Point("CENTER", -1 + rollCountXOffset, 4 + rollCountYOffset)
+	frame.greedButton.text:Point("CENTER", 1 + rollCountXOffset, 5 + rollCountYOffset)
+	frame.disenchantButton.text:Point("CENTER", 1 + rollCountXOffset, 4 + rollCountYOffset)
+	frame.passButton.text:Point("CENTER", 1 + rollCountXOffset, 2 + rollCountYOffset)
 
 	frame.bindText = frame:CreateFontString()
 	frame.bindText:Point("LEFT", frame.passButton, "RIGHT", 2, 0)
@@ -468,6 +512,14 @@ function M:ReleaseFrame(frame)
 	frame.rollTime = nil
 	frame.isTest = nil
 	frame.qualityColor = nil
+
+	frame:StopMovingOrSizing()
+	frame:ClearAllPoints()
+	if POSITION == "TOP" then
+		frame:Point("TOP", self.numFrames > 1 and self.RollBars[self.numFrames - 1] or AlertFrameHolder, "BOTTOM", 0, -4)
+	else
+		frame:Point("BOTTOM", self.numFrames > 1 and self.RollBars[self.numFrames - 1] or AlertFrameHolder, "TOP", 0, 4)
+	end
 
 	for i = 0, 3 do
 		frame.rollButtons[i].text:SetText("")

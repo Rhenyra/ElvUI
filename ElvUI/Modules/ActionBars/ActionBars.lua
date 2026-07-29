@@ -94,7 +94,8 @@ function AB:PositionAndSizeBar(barName)
 	local backdropSpacing = E:Scale((self.db[barName].backdropSpacing or self.db[barName].buttonspacing))
 	local buttonsPerRow = self.db[barName].buttonsPerRow
 	local numButtons = self.db[barName].buttons
-	local size = E:Scale(self.db[barName].buttonsize)
+	local buttonWidth = E:Scale(self.db[barName].buttonWidth or self.db[barName].buttonsize)
+	local buttonHeight = E:Scale(self.db[barName].buttonHeight or self.db[barName].buttonsize)
 	local point = self.db[barName].point
 	local numColumns = ceil(numButtons / buttonsPerRow)
 	local widthMult = self.db[barName].widthMult
@@ -127,8 +128,8 @@ function AB:PositionAndSizeBar(barName)
 
 	local sideSpacing = (bar.db.backdrop == true and (E.Border + backdropSpacing) or E.Spacing)
 	--Size of all buttons + Spacing between all buttons + Spacing between additional rows of buttons + Spacing between backdrop and buttons + Spacing on end borders with non-thin borders
-	local barWidth = (size * (buttonsPerRow * widthMult)) + ((buttonSpacing * (buttonsPerRow - 1)) * widthMult) + (buttonSpacing * (widthMult - 1)) + (sideSpacing*2)
-	local barHeight = (size * (numColumns * heightMult)) + ((buttonSpacing * (numColumns - 1)) * heightMult) + (buttonSpacing * (heightMult - 1)) + (sideSpacing*2)
+	local barWidth = (buttonWidth * (buttonsPerRow * widthMult)) + ((buttonSpacing * (buttonsPerRow - 1)) * widthMult) + (buttonSpacing * (widthMult - 1)) + (sideSpacing*2)
+	local barHeight = (buttonHeight * (numColumns * heightMult)) + ((buttonSpacing * (numColumns - 1)) * heightMult) + (buttonSpacing * (heightMult - 1)) + (sideSpacing*2)
 	bar:Width(barWidth)
 	bar:Height(barHeight)
 
@@ -166,7 +167,7 @@ function AB:PositionAndSizeBar(barName)
 		lastColumnButton = bar.buttons[i-buttonsPerRow]
 		button:SetParent(bar)
 		button:ClearAllPoints()
-		button:Size(size)
+		button:Size(buttonWidth, buttonHeight)
 		button:SetAttribute("showgrid", 1)
 
 		if i == 1 then
