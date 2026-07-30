@@ -411,10 +411,14 @@ function M:CreateRollFrame()
 		end
 	end)
 
+	local prevFrame = self.numFrames > 1 and self.RollBars[self.numFrames - 1]
+	if prevFrame == frame then prevFrame = nil end
+	local anchor = prevFrame or AlertFrameHolder
+
 	if POSITION == "TOP" then
-		frame:Point("TOP", self.numFrames > 1 and self.RollBars[self.numFrames - 1] or AlertFrameHolder, "BOTTOM", 0, -4)
+		frame:Point("TOP", anchor, "BOTTOM", 0, -4)
 	else
-		frame:Point("BOTTOM", self.numFrames > 1 and self.RollBars[self.numFrames - 1] or AlertFrameHolder, "TOP", 0, 4)
+		frame:Point("BOTTOM", anchor, "TOP", 0, 4)
 	end
 
 	local itemButton = CreateFrame("Button", "$parentIconFrame", frame)
@@ -515,10 +519,19 @@ function M:ReleaseFrame(frame)
 
 	frame:StopMovingOrSizing()
 	frame:ClearAllPoints()
+	local prevFrame
+	for idx, f in ipairs(self.RollBars) do
+		if f == frame then
+			if idx > 1 then prevFrame = self.RollBars[idx - 1] end
+			break
+		end
+	end
+	local anchor = (prevFrame and prevFrame ~= frame) and prevFrame or AlertFrameHolder
+
 	if POSITION == "TOP" then
-		frame:Point("TOP", self.numFrames > 1 and self.RollBars[self.numFrames - 1] or AlertFrameHolder, "BOTTOM", 0, -4)
+		frame:Point("TOP", anchor, "BOTTOM", 0, -4)
 	else
-		frame:Point("BOTTOM", self.numFrames > 1 and self.RollBars[self.numFrames - 1] or AlertFrameHolder, "TOP", 0, 4)
+		frame:Point("BOTTOM", anchor, "TOP", 0, 4)
 	end
 
 	for i = 0, 3 do

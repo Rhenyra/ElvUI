@@ -48,6 +48,10 @@ local function Point(obj, arg1, arg2, arg3, arg4, arg5)
 	if type(arg4) == "number" then arg4 = E:Scale(arg4) end
 	if type(arg5) == "number" then arg5 = E:Scale(arg5) end
 
+	if arg2 == obj then
+		arg2 = obj:GetParent() or E.UIParent
+	end
+
 	obj:SetPoint(arg1, arg2, arg3, arg4, arg5)
 end
 
