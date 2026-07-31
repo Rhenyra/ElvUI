@@ -11,6 +11,24 @@ S:AddCallback("Skin_WorldMap", function()
 	-- Check if Mapster is enabled
 	local mapsterEnabled = M:IsMapsterEnabled()
 
+	if WorldMapButton and not WorldMapButton.elvuiGetCenterFixed then
+		local origGetCenter = WorldMapButton.GetCenter
+		WorldMapButton.GetCenter = function(s)
+			local x, y = origGetCenter(s)
+			if not x or not y then
+				local map = _G["WorldMapFrame"]
+				if map then
+					x, y = map:GetCenter()
+				end
+				if not x or not y then
+					x, y = GetScreenWidth() / 2, GetScreenHeight() / 2
+				end
+			end
+			return x, y
+		end
+		WorldMapButton.elvuiGetCenterFixed = true
+	end
+
 	WorldMapFrame:DisableDrawLayer("BACKGROUND")
 	WorldMapFrame:DisableDrawLayer("ARTWORK")
 	WorldMapFrame:DisableDrawLayer("OVERLAY")

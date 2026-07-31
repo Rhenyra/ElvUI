@@ -13,7 +13,7 @@ S:AddCallback("Skin_Spellbook", function()
 	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.spellbook then return end
 
 	-- AscensionSpellbook
-	AscensionSpellbookFrame:SetWidth(500)
+	AscensionSpellbookFrame:SetWidth(580)
 	AscensionSpellbookFrameNineSlice:StripTextures(true)
 	AscensionSpellbookFrameNineSlice:EnableMouse(false)
 	AscensionSpellbookFrameNineSlice:SetFrameLevel(1)
@@ -65,9 +65,21 @@ S:AddCallback("Skin_Spellbook", function()
 
 	hooksecurefunc("SpellButton_UpdateButton", function(self)
 		local name = self:GetName()
-		_G[name.."SpellName"]:SetTextColor(1, 0.80, 0.10)
-		_G[name.."SubSpellName"]:SetTextColor(1, 1, 1)
-		_G[name.."Highlight"]:SetTexture(1, 1, 1, 0.3)
+		if name then
+			local spellName = _G[name.."SpellName"]
+			if spellName then
+				spellName:SetTextColor(1, 0.80, 0.10)
+				spellName:SetWidth(180)
+			end
+			local subSpellName = _G[name.."SubSpellName"]
+			if subSpellName then
+				subSpellName:SetTextColor(1, 1, 1)
+			end
+			local highlight = _G[name.."Highlight"]
+			if highlight then
+				highlight:SetTexture(1, 1, 1, 0.3)
+			end
+		end
 	end)
 
 	for i = 1, MAX_SKILLLINE_TABS do
